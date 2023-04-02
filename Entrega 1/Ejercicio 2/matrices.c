@@ -29,18 +29,22 @@ int main(int argc, char*argv[]){
 
     
     //Asignar matrices (Se utiliza alternativa 4 mostrada en la teoria)
-    double *A,*B,*C,*R;
+    double *A,*B,*C,*R,*AxB,*CxD;
     int *D;
 
     //indices
-    int i,j;
+    int i,j,k;
+    int sum;
 
     A=(double*)malloc(sizeof(double)*N*N);
     B=(double*)malloc(sizeof(double)*N*N);
+    AxB=(double*)malloc(sizeof(double)*N*N);
     C=(double*)malloc(sizeof(double)*N*N);
     R=(double*)malloc(sizeof(double)*N*N);
 
     D=(int*)malloc(sizeof(int)*N*N);
+
+    CxD=(double*)malloc(sizeof(double)*N*N);
 
     double maxA, minA, promA = 0.0;
     double maxB, minB, promB = 0.0;
@@ -87,11 +91,62 @@ int main(int argc, char*argv[]){
     printf("\n");
     printf("MATRIZ C\n");
     recorrerArreglo(C,N,ORDENXFILAS);
+
     printf("MATRIZ D\n");
     recorrerArreglo2(D,N,ORDENXCOLUMNAS);
     applyPow(2,D,N);
     printf("MATRIZ D DESPUES DE POTENCIA DE 2\n");
     recorrerArreglo2(D,N,ORDENXCOLUMNAS);
+
+    double escalar = (maxA * maxB - minA * minB)/(promA * promB);
+    printf("valor del escalar: %f\n",escalar);
+
+    //Multiplicación AxB
+    for (i=0; i<N; i++){
+        for (j=0; j<N; j++){
+            sum = 0;
+            for (k=0; k<N; k++){
+                sum += A[i*N+k] * B[k+j*N]; 
+            }
+            AxB[i+j*N] = sum;
+        }
+    }
+    printf("MATRIZ AxB\n");
+    recorrerArreglo(AxB,N,ORDENXCOLUMNAS);
+
+    //Multiplicación CxD
+    for (i=0; i<N; i++){
+        for (j=0; j<N; j++){
+            sum = 0;
+            for (k=0; k<N; k++){
+                sum += C[i*N+k] * D[k+j*N]; 
+            }
+            CxD[i+j*N] = sum;
+        }
+    }
+
+    printf("MATRIZ CxD\n");
+    recorrerArreglo(CxD,N,ORDENXCOLUMNAS);
+
+    //Suma entre AxB + CxD
+    for (i=0; i<N; i++){
+        for (j=0; j<N; j++){
+            AxB[i+j*N] += CxD[i+j*N];
+        }
+    }
+
+    printf("MATRIZ AxB + CxD\n");
+    recorrerArreglo(AxB,N,ORDENXCOLUMNAS);
+
+    //Multiplicación de matriz por escalar
+    for (i=0; i<N; i++){
+        for (j=0; j<N; j++){
+            AxB[i+j*N] *= escalar;
+        }
+    }
+
+    printf("MATRIZ (AxB + CxD) * escalar\n");
+    recorrerArreglo(AxB,N,ORDENXCOLUMNAS);
 
     //Finaliza conteo de tiempo
 
@@ -104,6 +159,8 @@ int main(int argc, char*argv[]){
     free(C);
     free(R);
     free(D);
+    free(AxB);
+    free(CxD);
 
     printf("finish!\n");
 
@@ -157,7 +214,7 @@ void applyPow(int p, int *matriz, int N){
 }
 
 void getDataFromArray(double *matriz, int N, int orden, double *min, double *max, double *prom){
-    *min = *max = *prom = getDoubleValor(matriz,0,0,N,orden);
+    *min = *max = getDoubleValor(matriz,0,0,N,orden);
     for(int i=0;i<N;i++){
         for(int j=0;j<N;j++){
 	        double valor = getDoubleValor(matriz,i,j,N,orden);
@@ -172,8 +229,13 @@ void getDataFromArray(double *matriz, int N, int orden, double *min, double *max
             *prom += valor;
         }
     } 
+    printf("valor de prom: %f\n",*prom);
     *prom = *prom/(N*N);
+    printf("valor de prom despues de dividir N*N: %f\n",*prom);
 }
+
+
+//Pruebas
 
 void recorrerArreglo(double *matriz, int N, int orden){
     for(int i=0;i<N;i++){
