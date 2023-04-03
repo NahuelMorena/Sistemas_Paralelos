@@ -10,8 +10,6 @@ void setDoubleValor(double *matriz, int fila, int columna, int orden, int N, dou
 void setIntValor(int *matriz, int fila, int columna, int orden, int N, int valor);
 int getValor(double *matriz,int fila,int columna,int N, int orden);
 int getRandomNumber();
-void getDataFromArray(double *matriz, int N, int orden, double *min, double *max, double *prom);
-void applyPow(int pow, int *matriz, int N);
 
 void recorrerArreglo(double *matriz, int N, int orden);
 void recorrerArreglo2(int *matriz, int N, int orden);
@@ -63,40 +61,40 @@ int main(int argc, char*argv[]){
 
     //Operar matrices
 
-    getDataFromArray(A, N, ORDENXFILAS, &maxA, &minA, &promA);
-    getDataFromArray(B, N, ORDENXCOLUMNAS, &maxB, &minB, &promB);
-    //applyPow(2,D,N);
+    //obteniendo minA, maxA y promA
+    minA = maxA = A[0];
+    for(i=0;i<N;i++){
+        for(j=0;j<N;j++){
+	        double valor = A[i*N+j];
+            if (valor < minA){
+                minA = valor;
+            }
 
-    printf("MATRIZ A\n");
-    recorrerArreglo(A,N,ORDENXFILAS);
-    printf("maxA: ");
-    printf("%f",maxA);
-    printf("\n");
-    printf("minA: ");
-    printf("%f",minA);
-    printf("\n");
-    printf("promA: ");
-    printf("%f",promA);
-    printf("\n");
-    printf("MATRIZ B\n");
-    recorrerArreglo(B,N,ORDENXFILAS);
-    printf("maxB: ");
-    printf("%f",maxB);
-    printf("\n");
-    printf("minB: ");
-    printf("%f",minB);
-    printf("\n");
-    printf("promB: ");
-    printf("%f",promB);
-    printf("\n");
-    printf("MATRIZ C\n");
-    recorrerArreglo(C,N,ORDENXFILAS);
+            if (valor > maxA){
+                maxA = valor;
+            }
 
-    printf("MATRIZ D\n");
-    recorrerArreglo2(D,N,ORDENXCOLUMNAS);
-    applyPow(2,D,N);
-    printf("MATRIZ D DESPUES DE POTENCIA DE 2\n");
-    recorrerArreglo2(D,N,ORDENXCOLUMNAS);
+            promA += valor;
+        }
+    } 
+    promA = promA/(N*N);
+
+    //obteniendo minB, maxB y promB
+    minB = maxB = B[0];
+    for(i=0;i<N;i++){
+        for(j=0;j<N;j++){
+	        double valor = B[i+j*N];
+            if (valor < minB){
+                minB = valor;
+            }
+
+            if (valor > maxB){
+                maxB = valor;
+            }
+            promB += valor;
+        }
+    } 
+    promB = promB/(N*N);
 
     double escalar = (maxA * maxB - minA * minB)/(promA * promB);
     printf("valor del escalar: %f\n",escalar);
@@ -123,6 +121,21 @@ int main(int argc, char*argv[]){
 
     printf("MATRIZ (AxB) * escalar\n");
     recorrerArreglo(AxB,N,ORDENXCOLUMNAS);
+
+    //Pot2(D)
+
+    printf("MATRIZ D\n");
+    recorrerArreglo2(D,N,ORDENXCOLUMNAS);
+    
+    for(int i=0;i<N;i++){
+        for(int j=0;j<N;j++){
+            D[i+j*N] = (int) pow(D[i+j*N],2);
+        }
+    } 
+
+    printf("MATRIZ D DESPUES DE POTENCIA DE 2\n");
+    recorrerArreglo2(D,N,ORDENXCOLUMNAS);
+
 
     //Multiplicación CxD
     for (i=0; i<N; i++){
@@ -203,35 +216,6 @@ double getDoubleValor(double *matriz, int fila, int columna, int N, int orden){
 
 int getRandomNumber(){
     return rand() % 41 + 1;
-}
-
-void applyPow(int p, int *matriz, int N){
-    for(int i=0;i<N;i++){
-        for(int j=0;j<N;j++){
-	        setIntValor(matriz,i,j,ORDENXCOLUMNAS,N,(int)pow(getIntValor(matriz,i,j,N,ORDENXCOLUMNAS),p));
-        }
-    } 
-}
-
-void getDataFromArray(double *matriz, int N, int orden, double *min, double *max, double *prom){
-    *min = *max = getDoubleValor(matriz,0,0,N,orden);
-    for(int i=0;i<N;i++){
-        for(int j=0;j<N;j++){
-	        double valor = getDoubleValor(matriz,i,j,N,orden);
-            if (valor < *min){
-                *min = valor;
-            }
-
-            if (valor > *max){
-                *max = valor;
-            }
-
-            *prom += valor;
-        }
-    } 
-    printf("valor de prom: %f\n",*prom);
-    *prom = *prom/(N*N);
-    printf("valor de prom despues de dividir N*N: %f\n",*prom);
 }
 
 
