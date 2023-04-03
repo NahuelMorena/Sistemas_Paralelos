@@ -114,6 +114,16 @@ int main(int argc, char*argv[]){
     printf("MATRIZ AxB\n");
     recorrerArreglo(AxB,N,ORDENXCOLUMNAS);
 
+    //Multiplicación de AxB por escalar
+    for (i=0; i<N; i++){
+        for (j=0; j<N; j++){
+            AxB[i+j*N] *= escalar;
+        }
+    }
+
+    printf("MATRIZ (AxB) * escalar\n");
+    recorrerArreglo(AxB,N,ORDENXCOLUMNAS);
+
     //Multiplicación CxD
     for (i=0; i<N; i++){
         for (j=0; j<N; j++){
@@ -128,24 +138,14 @@ int main(int argc, char*argv[]){
     printf("MATRIZ CxD\n");
     recorrerArreglo(CxD,N,ORDENXCOLUMNAS);
 
-    //Suma entre AxB + CxD
+    //Suma entre escalar*AxB + CxD
     for (i=0; i<N; i++){
         for (j=0; j<N; j++){
             AxB[i+j*N] += CxD[i+j*N];
         }
     }
 
-    printf("MATRIZ AxB + CxD\n");
-    recorrerArreglo(AxB,N,ORDENXCOLUMNAS);
-
-    //Multiplicación de matriz por escalar
-    for (i=0; i<N; i++){
-        for (j=0; j<N; j++){
-            AxB[i+j*N] *= escalar;
-        }
-    }
-
-    printf("MATRIZ (AxB + CxD) * escalar\n");
+    printf("MATRIZ (escalar *AxB) + CxD\n");
     recorrerArreglo(AxB,N,ORDENXCOLUMNAS);
 
     //Finaliza conteo de tiempo
