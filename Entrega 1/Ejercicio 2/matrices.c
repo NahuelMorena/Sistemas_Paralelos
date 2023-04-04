@@ -2,14 +2,16 @@
 #include <stdlib.h>
 //Utilizado para calcular las potencias
 #include <math.h>
+//Utilizado para contar tiempo empleado
+#include <sys/time.h>
+#include <time.h>
 #define ORDENXFILAS 0
 #define ORDENXCOLUMNAS 1
 
 //Declaración de funciones 
-void setDoubleValor(double *matriz, int fila, int columna, int orden, int N, double valor);
-void setIntValor(int *matriz, int fila, int columna, int orden, int N, int valor);
 int getValor(double *matriz,int fila,int columna,int N, int orden);
 int getRandomNumber();
+double dwalltime();
 
 void recorrerArreglo(double *matriz, int N, int orden);
 void recorrerArreglo2(int *matriz, int N, int orden);
@@ -27,37 +29,42 @@ int main(int argc, char*argv[]){
 
     
     //Asignar matrices (Se utiliza alternativa 4 mostrada en la teoria)
-    double *A,*B,*C,*R,*AxB,*CxD;
+    double *A,*B,*C,*R,*CxD;
     int *D;
 
     //indices
     int i,j,k;
+
+    //variables varias
     int sum;
+    int size = N*N;
+    double timetick, endtime;
 
-    A=(double*)malloc(sizeof(double)*N*N);
-    B=(double*)malloc(sizeof(double)*N*N);
-    AxB=(double*)malloc(sizeof(double)*N*N);
-    C=(double*)malloc(sizeof(double)*N*N);
-    R=(double*)malloc(sizeof(double)*N*N);
+    A=(double*)malloc(sizeof(double)*size);
+    B=(double*)malloc(sizeof(double)*size);
+    C=(double*)malloc(sizeof(double)*size);
+    R=(double*)malloc(sizeof(double)*size);
 
-    D=(int*)malloc(sizeof(int)*N*N);
+    D=(int*)malloc(sizeof(int)*size);
 
-    CxD=(double*)malloc(sizeof(double)*N*N);
+    CxD=(double*)malloc(sizeof(double)*size);
 
     double maxA, minA, promA = 0.0;
     double maxB, minB, promB = 0.0;
 
-    //Inicializar matrices
-    for(i=0;i<N;i++){
-        for(j=0;j<N;j++){
-	        setDoubleValor(A,i,j,ORDENXFILAS,N,1.0);
-	        setDoubleValor(B,i,j,ORDENXCOLUMNAS,N,1.0);
-            setDoubleValor(C,i,j,ORDENXFILAS,N,1.0);
-            setIntValor(D,i,j,ORDENXCOLUMNAS,N,getRandomNumber());
-        }
-    }   
+    //Inicializar matrices 
+    srand(time(NULL));
+
+    for (i=0; i<size; i++){
+        A[i] = 1.0;
+        B[i] = 1.0;
+        C[i] = 1.0;
+        D[i] = getRandomNumber();
+    } 
 
     //Empieza a contar el tiempo
+    timetick = dwalltime();
+
 
     //Operar matrices
 
@@ -77,7 +84,7 @@ int main(int argc, char*argv[]){
             promA += valor;
         }
     } 
-    promA = promA/(N*N);
+    promA = promA/(size);
 
     //obteniendo minB, maxB y promB
     minB = maxB = B[0];
@@ -94,7 +101,7 @@ int main(int argc, char*argv[]){
             promB += valor;
         }
     } 
-    promB = promB/(N*N);
+    promB = promB/(size);
 
     double escalar = (maxA * maxB - minA * minB)/(promA * promB);
     printf("valor del escalar: %f\n",escalar);
@@ -106,21 +113,21 @@ int main(int argc, char*argv[]){
             for (k=0; k<N; k++){
                 sum += A[i*N+k] * B[k+j*N]; 
             }
-            AxB[i+j*N] = sum;
+            R[i+j*N] = sum;
         }
     }
     printf("MATRIZ AxB\n");
-    recorrerArreglo(AxB,N,ORDENXCOLUMNAS);
+    recorrerArreglo(R,N,ORDENXCOLUMNAS);
 
     //Multiplicación de AxB por escalar
     for (i=0; i<N; i++){
         for (j=0; j<N; j++){
-            AxB[i+j*N] *= escalar;
+            R[i+j*N] *= escalar;
         }
     }
 
     printf("MATRIZ (AxB) * escalar\n");
-    recorrerArreglo(AxB,N,ORDENXCOLUMNAS);
+    recorrerArreglo(R,N,ORDENXCOLUMNAS);
 
     //Pot2(D)
 
@@ -154,14 +161,16 @@ int main(int argc, char*argv[]){
     //Suma entre escalar*AxB + CxD
     for (i=0; i<N; i++){
         for (j=0; j<N; j++){
-            AxB[i+j*N] += CxD[i+j*N];
+            R[i+j*N] += CxD[i+j*N];
         }
     }
 
     printf("MATRIZ (escalar *AxB) + CxD\n");
-    recorrerArreglo(AxB,N,ORDENXCOLUMNAS);
+    recorrerArreglo(R,N,ORDENXCOLUMNAS);
 
     //Finaliza conteo de tiempo
+    endtime = dwalltime() - timetick;
+    printf("Tiempo en segundos %f\n", endtime);
 
     //Obtención del resultado
 
@@ -172,7 +181,6 @@ int main(int argc, char*argv[]){
     free(C);
     free(R);
     free(D);
-    free(AxB);
     free(CxD);
 
     printf("finish!\n");
@@ -181,22 +189,6 @@ int main(int argc, char*argv[]){
 }
 
 //--------------------------------------------------------------------------------------------------
-
-void setDoubleValor(double *matriz, int fila, int columna, int orden, int N, double valor){
-    if(orden==ORDENXFILAS){
-        matriz[fila*N+columna]=valor;
-    }else{
-        matriz[fila+columna*N]=valor;
-    }
-}
-
-void setIntValor(int *matriz, int fila, int columna, int orden, int N, int valor){
-    if(orden==ORDENXFILAS){
-        matriz[fila*N+columna]=valor;
-    }else{
-        matriz[fila+columna*N]=valor;
-    }
-}
 
 int getIntValor(int *matriz,int fila,int columna, int N, int orden){
     if(orden==ORDENXFILAS){
@@ -216,6 +208,16 @@ double getDoubleValor(double *matriz, int fila, int columna, int N, int orden){
 
 int getRandomNumber(){
     return rand() % 41 + 1;
+}
+
+//Para calcular tiempo
+double dwalltime(){
+    double sec;
+    struct timeval tv;
+
+    gettimeofday(&tv,NULL);
+    sec = tv.tv_sec + tv.tv_usec/1000000.0;
+    return sec;
 }
 
 
