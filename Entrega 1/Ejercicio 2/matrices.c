@@ -4,7 +4,10 @@
 #include <math.h>
 //Utilizado para contar tiempo empleado
 #include <sys/time.h>
+//Utilizado para obtener numeros random
 #include <time.h>
+//Utilizado para asignar espacio en memoria de string
+#include <string.h>
 #define ORDENXFILAS 0
 #define ORDENXCOLUMNAS 1
 
@@ -104,7 +107,7 @@ int main(int argc, char*argv[]){
     promB = promB/(size);
 
     double escalar = (maxA * maxB - minA * minB)/(promA * promB);
-    printf("valor del escalar: %f\n",escalar);
+    //printf("valor del escalar: %f\n",escalar);
 
     //Multiplicación AxB
     for (i=0; i<N; i++){
@@ -116,8 +119,8 @@ int main(int argc, char*argv[]){
             R[i+j*N] = sum;
         }
     }
-    printf("MATRIZ AxB\n");
-    recorrerArreglo(R,N,ORDENXCOLUMNAS);
+    //printf("MATRIZ AxB\n");
+    //recorrerArreglo(R,N,ORDENXCOLUMNAS);
 
     //Multiplicación de AxB por escalar
     for (i=0; i<N; i++){
@@ -126,13 +129,13 @@ int main(int argc, char*argv[]){
         }
     }
 
-    printf("MATRIZ (AxB) * escalar\n");
-    recorrerArreglo(R,N,ORDENXCOLUMNAS);
+    //printf("MATRIZ (AxB) * escalar\n");
+    //recorrerArreglo(R,N,ORDENXCOLUMNAS);
 
     //Pot2(D)
 
-    printf("MATRIZ D\n");
-    recorrerArreglo2(D,N,ORDENXCOLUMNAS);
+    //printf("MATRIZ D\n");
+    //recorrerArreglo2(D,N,ORDENXCOLUMNAS);
     
     for(int i=0;i<N;i++){
         for(int j=0;j<N;j++){
@@ -140,8 +143,8 @@ int main(int argc, char*argv[]){
         }
     } 
 
-    printf("MATRIZ D DESPUES DE POTENCIA DE 2\n");
-    recorrerArreglo2(D,N,ORDENXCOLUMNAS);
+    //printf("MATRIZ D DESPUES DE POTENCIA DE 2\n");
+    //recorrerArreglo2(D,N,ORDENXCOLUMNAS);
 
 
     //Multiplicación CxD
@@ -155,8 +158,8 @@ int main(int argc, char*argv[]){
         }
     }
 
-    printf("MATRIZ CxD\n");
-    recorrerArreglo(CxD,N,ORDENXCOLUMNAS);
+    //printf("MATRIZ CxD\n");
+    //recorrerArreglo(CxD,N,ORDENXCOLUMNAS);
 
     //Suma entre escalar*AxB + CxD
     for (i=0; i<N; i++){
@@ -165,15 +168,24 @@ int main(int argc, char*argv[]){
         }
     }
 
-    printf("MATRIZ (escalar *AxB) + CxD\n");
-    recorrerArreglo(R,N,ORDENXCOLUMNAS);
+    //printf("MATRIZ (escalar *AxB) + CxD\n");
+    //recorrerArreglo(R,N,ORDENXCOLUMNAS);
 
     //Finaliza conteo de tiempo
     endtime = dwalltime() - timetick;
-    printf("Tiempo en segundos %f\n", endtime);
+    //printf("Tiempo en segundos %f\n", endtime);
 
     //Obtención del resultado
+    char file[10000];
+    bzero(file,10000);
+    char temp_str[2000];
 
+    sprintf(temp_str, "Analisis de tiempo obtenidos en matrices de %i. \n",N);
+    strcat(file, temp_str);
+    sprintf(temp_str, "Tiempo obtenido de %f segundos\n", endtime);
+    strcat(file, temp_str);
+    sprintf(temp_str, "-----------------------------------------------\n\n");
+    strcat(file, temp_str);
 
     //Liberando memoria
     free(A);
@@ -183,8 +195,7 @@ int main(int argc, char*argv[]){
     free(D);
     free(CxD);
 
-    printf("finish!\n");
-
+    printf("%s", file);
     return(0);
 }
 
