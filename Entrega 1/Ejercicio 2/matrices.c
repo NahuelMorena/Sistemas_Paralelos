@@ -1,34 +1,25 @@
 #include <stdio.h>
 #include <stdlib.h>
-//Utilizado para calcular las potencias
-#include <math.h>
 //Utilizado para contar tiempo empleado
 #include <sys/time.h>
 //Utilizado para obtener numeros random
 #include <time.h>
-//Utilizado para asignar espacio en memoria de string
-#include <string.h>
-#define ORDENXFILAS 0
-#define ORDENXCOLUMNAS 1
 
 //Declaración de funciones 
-int getValor(double *matriz,int fila,int columna,int N, int orden);
+double dwalltime();
+void timelog_start();
+void timelog_total();
+void timelog(const char *desc);
+static double stime, ttime = 0.0;
+
 int getRandomNumber();
+
 void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double escalar);
 void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double escalar);
 
 void matIntmulblks(double *a, int *b, double *c, int n, int bs);
 void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs);
-double dwalltime();
 
-void recorrerArreglo(double *matriz, int N, int orden);
-void recorrerArreglo2(int *matriz, int N, int orden);
-
-void timelog_start();
-void timelog_total();
-void timelog(const char *desc);
-
-static double stime, ttime = 0.0;
 
 int main(int argc, char*argv[]){
     //Validar parametros
@@ -44,19 +35,14 @@ int main(int argc, char*argv[]){
     int bs = atoi(argv[2]);
     printf("bs = %i\n",bs);
 
-    
     //Asignar matrices (Se utiliza alternativa 4 mostrada en la teoria)
     double *A,*B,*C,*R,*CxD;
     int *D;
 
     //indices
     int i, j, k, offI, offJ;
-    int fila, columna;
 
-    //variables varias
-    int sum;
     int size = N*N;
-    double timetick, endtime;
 
     A=(double*)malloc(sizeof(double)*size);
     B=(double*)malloc(sizeof(double)*size);
@@ -81,10 +67,6 @@ int main(int argc, char*argv[]){
         CxD[i] = 0.0;
         D[i] = getRandomNumber();
     } 
-
-    //Empieza a contar el tiempo
-    timetick = dwalltime();
-
 
     //Operar matrices
 
@@ -135,7 +117,6 @@ int main(int argc, char*argv[]){
     timelog_start();
     double escalar = (maxA * maxB - minA * minB) / (promA * promB);
     timelog("e = (maxA * maxB - minA * minB) / (promA * promB)");
-    //printf("valor del escalar: %f\n",escalar);
 
     //Multiplicación AxB
 
@@ -143,26 +124,16 @@ int main(int argc, char*argv[]){
     matmulblksWithEscalar(A, B, R, N, bs, escalar);
     timelog("R = (AxB) * e");
 
-    //printf("MATRIZ AxB\n");
-    //recorrerArreglo(R,N,ORDENXCOLUMNAS);
-
-    //Pot2(D)
-
-    //printf("MATRIZ D\n");
-    //recorrerArreglo2(D,N,ORDENXCOLUMNAS);
-    
+    //Pot2(D)  
     timelog_start();
     for(int j=0;j<N;j++) {
         offJ = j*N;
         for(int i=0;i<N;i++) {
             int v = D[i+offJ];
-            D[i+j*N] = v * v;
+            D[i+offJ] = v * v;
         }
     }
     timelog("D = Pot2(D)");
-
-    //printf("MATRIZ D DESPUES DE POTENCIA DE 2\n");
-    //recorrerArreglo2(D,N,ORDENXCOLUMNAS);
 
 
     //Multiplicación CxD
@@ -171,10 +142,8 @@ int main(int argc, char*argv[]){
     matIntmulblks(C, D, CxD, N, bs);
     timelog("CxD = CxD");
 
-    //printf("MATRIZ CxD\n");
-    //recorrerArreglo(CxD,N,ORDENXCOLUMNAS);
 
-    //Suma entre escalar*AxB + CxD
+    //Suma entre (escalar*AxB) + CxD
     timelog_start();
     for (i=0; i<N; i++) {
         offI = i * N;
@@ -184,28 +153,7 @@ int main(int argc, char*argv[]){
     }
     timelog("R = R + CxD");
 
-    //printf("MATRIZ (escalar *AxB) + CxD\n");
-    //recorrerArreglo(R,N,ORDENXCOLUMNAS);
-
-    //Finaliza conteo de tiempo
-    //endtime = dwalltime() - timetick;
-    //printf("Tiempo en segundos %f\n", endtime);
-
     timelog_total();
-
-    //Obtención del resultado
-    /*
-    char file[10000];
-    bzero(file,10000);
-    char temp_str[2000];
-
-    sprintf(temp_str, "Analisis de tiempo obtenidos en matrices de %i. \n",N);
-    strcat(file, temp_str);
-    sprintf(temp_str, "Tiempo obtenido de %f segundos\n", endtime);
-    strcat(file, temp_str);
-    sprintf(temp_str, "-----------------------------------------------\n\n");
-    strcat(file, temp_str);
-    */
 
     //Liberando memoria
     free(A);
@@ -217,6 +165,8 @@ int main(int argc, char*argv[]){
 
     return 0;
 }
+
+/*****************************************************************/
 
 /* Funciones para depurar el tiempo de ejecución */
 double dwalltime() {
@@ -233,7 +183,7 @@ void timelog_start() {
 }
 
 void timelog_total() {
-    printf("Tiempo total: %.02fms\n", ttime * 1000.0);
+    printf("Tiempo total: %.02fms\n\n\n", ttime * 1000.0);
 }
 
 void timelog(const char *desc) {
@@ -244,59 +194,37 @@ void timelog(const char *desc) {
         printf("Tiempo '%s': %.02fms\n", desc, time * 1000.0);
 }
 
-//--------------------------------------------------------------------------------------------------
-
-int getIntValor(int *matriz,int fila,int columna, int N, int orden){
-    if(orden==ORDENXFILAS){
-        return(matriz[fila*N+columna]);
-    }else{
-        return(matriz[fila+columna*N]);
-    }
-}
-
-double getDoubleValor(double *matriz, int fila, int columna, int N, int orden){
-    if(orden==ORDENXFILAS){
-        return(matriz[fila*N+columna]);
-    }else{
-        return(matriz[fila+columna*N]);
-    }
-}
+/*****************************************************************/
 
 int getRandomNumber(){
     return rand() % 41 + 1;
 }
 
+/*****************************************************************/
+
+//Multiplicación de matrices y escalar
 void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double escalar) {
-    int i, j, k, offI, offJ;    /* Guess what... */
+    int i, j, k, offI, offJ;   
   
-    for (i = 0; i < n; i += bs)
-    {
+    for (i = 0; i < n; i += bs){
         offI = i * n;
-        for (j = 0; j < n; j += bs)
-        {
+        for (j = 0; j < n; j += bs){
             offJ = j * n;
-            for (k = 0; k < n; k += bs)
-            {
+            for (k = 0; k < n; k += bs){
                 blkmulWithEscalar(&a[offI + k], &b[offJ + k], &c[offI + j], n, bs, escalar);
             }
         }
     }
 }
 
-/*****************************************************************/
-
-/* Multiply (block)submatrices */
 void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double escalar){
-    int i, j, k, offI, offJ;    /* Guess what... again... */
+    int i, j, k, offI, offJ;    
 
-    for (i = 0; i < bs; i++)
-    {
+    for (i = 0; i < bs; i++){
         int offI = i * n;
-        for (j = 0; j < bs; j++)
-        {
+        for (j = 0; j < bs; j++){
             int offJ = i * n;
-            for (k = 0; k < bs; k++)
-            {
+            for (k = 0; k < bs; k++){
                 cblk[offI + j] += ablk[offI + k] * bblk[offJ + k];
             }
             cblk[offI + j] *= escalar;
@@ -304,69 +232,31 @@ void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, 
     }
 }
 
+//Multiplicación de matrices 
 void matIntmulblks(double *a, int *b, double *c, int n, int bs){
-    int i, j, k, offI, offJ;    /* Guess what... */
+    int i, j, k, offI, offJ;    
 
-    for (i = 0; i < n; i += bs)
-    {
+    for (i = 0; i < n; i += bs){
         offI = i * n;
-        for (j = 0; j < n; j += bs)
-        {
+        for (j = 0; j < n; j += bs){
             offJ = j * n;
-            for (k = 0; k < n; k += bs)
-            {
+            for (k = 0; k < n; k += bs){
                 blkmulwithIntMat(&a[offI + k], &b[offJ + k], &c[offI + j], n, bs);
             }
         }
     }
 }
 
-/*****************************************************************/
-
-/* Multiply (block)submatrices */
 void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs){
-    int i, j, k, offI, offJ;    /* Guess what... again... */
+    int i, j, k, offI, offJ;  
 
-    for (i = 0; i < bs; i++)
-    {
+    for (i = 0; i < bs; i++){
         offI = i * n;
-        for (j = 0; j < bs; j++)
-        {
+        for (j = 0; j < bs; j++){
             offJ = j * n;
-            for (k = 0; k < bs; k++)
-            {
+            for (k = 0; k < bs; k++){
                 cblk[offI + j] += ablk[offI + k] * bblk[offJ + k];
             }
         }
     }
-}
-
-//Pruebas
-
-void recorrerArreglo(double *matriz, int N, int orden){
-    for(int i=0;i<N;i++){
-        int cont = 0;
-        for(int j=0;j<N;j++){
-	        printf("%f ||| ",getDoubleValor(matriz,i,j,N,orden));
-            cont++;
-            if (cont == N){
-                printf("\n");
-                cont = 0;
-            }
-        }
-    } 
-}
-
-void recorrerArreglo2(int *matriz, int N, int orden){
-    for(int i=0;i<N;i++){
-        int cont = 0;
-        for(int j=0;j<N;j++){
-	        printf("%d ||| ",getIntValor(matriz,i,j,N,orden));
-            cont++;
-            if (cont == N){
-                printf("\n");
-                cont = 0;
-            }
-        }
-    } 
 }

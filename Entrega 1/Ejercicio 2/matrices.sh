@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #Se compila el programa 
-gcc -o matrices matrices.c -lm
+gcc -o matrices matrices.c 
 
 #Se setean variables
 array=(512 1024 2048 4096)
