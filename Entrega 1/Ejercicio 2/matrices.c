@@ -14,11 +14,11 @@
 //Declaración de funciones 
 int getValor(double *matriz,int fila,int columna,int N, int orden);
 int getRandomNumber();
-void matmulblks(double *a, double *b, double *c, int n, int bs);
-void blkmul(double *ablk, double *bblk, double *cblk, int n, int bs);
+void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double escalar);
+void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double escalar);
 
-void matmulblks2(double *a, int *b, double *c, int n, int bs);
-void blkmul2(double *ablk, int *bblk, double *cblk, int n, int bs);
+void matIntmulblks(double *a, int *b, double *c, int n, int bs);
+void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs);
 double dwalltime();
 
 void recorrerArreglo(double *matriz, int N, int orden);
@@ -122,31 +122,11 @@ int main(int argc, char*argv[]){
 
     //Multiplicación AxB
 
-    matmulblks(A, B, R, N, bs);
+    matmulblksWithEscalar(A, B, R, N, bs, escalar);
 
-    //for (i=0; i<N; i++){
-    //    fila = i*N;
-    //    for (j=0; j<N; j++){
-    //        columna = j*N;
-    //        sum = 0;
-    //        for (k=0; k<N; k++){
-    //            sum += A[fila+k] * B[k+columna]; 
-    //        }
-    //        R[i+columna] = sum * escalar;
-    //    }
-    //}
     //printf("MATRIZ AxB\n");
     //recorrerArreglo(R,N,ORDENXCOLUMNAS);
-
-    //Multiplicación de AxB por escalar
-    //for (i=0; i<N; i++){
-    //    for (j=0; j<N; j++){
-    //        R[i+j*N] *= escalar;
-    //    }
-    //}
-
-    //printf("MATRIZ (AxB) * escalar\n");
-    //recorrerArreglo(R,N,ORDENXCOLUMNAS);
+;
 
     //Pot2(D)
 
@@ -165,19 +145,7 @@ int main(int argc, char*argv[]){
 
     //Multiplicación CxD
 
-    matmulblks2(C, D, CxD, N, bs);
-
-    //for (i=0; i<N; i++){
-    //    fila = i*N;
-    //    for (j=0; j<N; j++){
-    //        columna = j*N;
-    //        sum = 0;
-    //        for (k=0; k<N; k++){
-    //            sum += C[fila+k] * D[k+columna]; 
-    //        }
-    //        CxD[i+columna] = sum;
-    //    }
-    //}
+    matIntmulblks(C, D, CxD, N, bs);
 
     //printf("MATRIZ CxD\n");
     //recorrerArreglo(CxD,N,ORDENXCOLUMNAS);
@@ -185,7 +153,8 @@ int main(int argc, char*argv[]){
     //Suma entre escalar*AxB + CxD
     for (i=0; i<N; i++){
         for (j=0; j<N; j++){
-            R[i+j*N] += CxD[i+j*N];
+            R[i*N+j] += CxD[i*N+j];
+            //R[i+j*N] += CxD[i+j*N];
         }
     }
 
@@ -242,11 +211,8 @@ int getRandomNumber(){
     return rand() % 41 + 1;
 }
 
-void matmulblks(double *a, double *b, double *c, int n, int bs){
+void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double escalar){
   int i, j, k;    /* Guess what... */
-
-  /* Init matrix c, just in case */  
-  //initvalmat(c, n, 0.0, 0);
   
   for (i = 0; i < n; i += bs)
   {
@@ -254,7 +220,7 @@ void matmulblks(double *a, double *b, double *c, int n, int bs){
     {
       for  (k = 0; k < n; k += bs)
       {
-        blkmul(&a[i*n + k], &b[j*n + k], &c[i*n + j], n, bs);
+        blkmulWithEscalar(&a[i*n + k], &b[j*n + k], &c[i*n + j], n, bs, escalar);
       }
     }
   }
@@ -263,7 +229,7 @@ void matmulblks(double *a, double *b, double *c, int n, int bs){
 /*****************************************************************/
 
 /* Multiply (block)submatrices */
-void blkmul(double *ablk, double *bblk, double *cblk, int n, int bs){
+void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double escalar){
   int i, j, k;    /* Guess what... again... */
 
   for (i = 0; i < bs; i++)
@@ -274,11 +240,12 @@ void blkmul(double *ablk, double *bblk, double *cblk, int n, int bs){
       {
         cblk[i*n + j] += ablk[i*n + k] * bblk[j*n + k];
       }
+      cblk[i*n + j] *= escalar;
     }
   }
 }
 
-void matmulblks2(double *a, int *b, double *c, int n, int bs){
+void matIntmulblks(double *a, int *b, double *c, int n, int bs){
   int i, j, k;    /* Guess what... */
 
   /* Init matrix c, just in case */  
@@ -290,7 +257,7 @@ void matmulblks2(double *a, int *b, double *c, int n, int bs){
     {
       for  (k = 0; k < n; k += bs)
       {
-        blkmul2(&a[i*n + k], &b[j*n + k], &c[i*n + j], n, bs);
+        blkmulwithIntMat(&a[i*n + k], &b[j*n + k], &c[i*n + j], n, bs);
       }
     }
   }
@@ -299,7 +266,7 @@ void matmulblks2(double *a, int *b, double *c, int n, int bs){
 /*****************************************************************/
 
 /* Multiply (block)submatrices */
-void blkmul2(double *ablk, int *bblk, double *cblk, int n, int bs){
+void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs){
   int i, j, k;    /* Guess what... again... */
 
   for (i = 0; i < bs; i++)
