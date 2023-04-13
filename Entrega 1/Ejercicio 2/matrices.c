@@ -24,6 +24,12 @@ double dwalltime();
 void recorrerArreglo(double *matriz, int N, int orden);
 void recorrerArreglo2(int *matriz, int N, int orden);
 
+void timelog_start();
+void timelog_total();
+void timelog(const char *desc);
+
+static double stime, ttime = 0.0;
+
 int main(int argc, char*argv[]){
     //Validar parametros
     if (argc < 3){
@@ -44,7 +50,7 @@ int main(int argc, char*argv[]){
     int *D;
 
     //indices
-    int i,j,k;
+    int i, j, k, offI, offJ;
     int fila, columna;
 
     //variables varias
@@ -83,15 +89,18 @@ int main(int argc, char*argv[]){
     //Operar matrices
 
     //obteniendo minA, maxA y promA
+    timelog_start();
     minA = maxA = A[0];
-    for(i=0;i<N;i++){
-        for(j=0;j<N;j++){
-	        double valor = A[i*N+j];
-            if (valor < minA){
+    for(i=0;i<N;i++) {
+        offI = i * N;
+        for(j=0;j<N;j++) {
+	        double valor = A[offI+j];
+
+            if (valor < minA) {
                 minA = valor;
             }
 
-            if (valor > maxA){
+            if (valor > maxA) {
                 maxA = valor;
             }
 
@@ -99,45 +108,58 @@ int main(int argc, char*argv[]){
         }
     } 
     promA = promA/(size);
+    timelog("minA, maxA, promA");
 
     //obteniendo minB, maxB y promB
+    timelog_start();
     minB = maxB = B[0];
-    for(i=0;i<N;i++){
-        for(j=0;j<N;j++){
-	        double valor = B[i+j*N];
-            if (valor < minB){
+    for(j=0;j<N;j++) {
+        offJ = j * N;
+        for(i=0;i<N;i++) {
+	        double valor = B[i+offJ];
+
+            if (valor < minB) {
                 minB = valor;
             }
 
-            if (valor > maxB){
+            if (valor > maxB) {
                 maxB = valor;
             }
+
             promB += valor;
         }
     } 
     promB = promB/(size);
+    timelog("minB, maxB, promB");
 
-    double escalar = (maxA * maxB - minA * minB)/(promA * promB);
+    timelog_start();
+    double escalar = (maxA * maxB - minA * minB) / (promA * promB);
+    timelog("e = (maxA * maxB - minA * minB) / (promA * promB)");
     //printf("valor del escalar: %f\n",escalar);
 
     //Multiplicación AxB
 
+    timelog_start();
     matmulblksWithEscalar(A, B, R, N, bs, escalar);
+    timelog("R = (AxB) * e");
 
     //printf("MATRIZ AxB\n");
     //recorrerArreglo(R,N,ORDENXCOLUMNAS);
-;
 
     //Pot2(D)
 
     //printf("MATRIZ D\n");
     //recorrerArreglo2(D,N,ORDENXCOLUMNAS);
     
-    for(int i=0;i<N;i++){
-        for(int j=0;j<N;j++){
-            D[i+j*N] = (int) pow(D[i+j*N],2);
+    timelog_start();
+    for(int j=0;j<N;j++) {
+        offJ = j*N;
+        for(int i=0;i<N;i++) {
+            int v = D[i+offJ];
+            D[i+j*N] = v * v;
         }
-    } 
+    }
+    timelog("D = Pot2(D)");
 
     //printf("MATRIZ D DESPUES DE POTENCIA DE 2\n");
     //recorrerArreglo2(D,N,ORDENXCOLUMNAS);
@@ -145,27 +167,34 @@ int main(int argc, char*argv[]){
 
     //Multiplicación CxD
 
+    timelog_start();
     matIntmulblks(C, D, CxD, N, bs);
+    timelog("CxD = CxD");
 
     //printf("MATRIZ CxD\n");
     //recorrerArreglo(CxD,N,ORDENXCOLUMNAS);
 
     //Suma entre escalar*AxB + CxD
-    for (i=0; i<N; i++){
-        for (j=0; j<N; j++){
-            R[i*N+j] += CxD[i*N+j];
-            //R[i+j*N] += CxD[i+j*N];
+    timelog_start();
+    for (i=0; i<N; i++) {
+        offI = i * N;
+        for (j=0; j<N; j++) {
+            R[offI+j] += CxD[offI+j];
         }
     }
+    timelog("R = R + CxD");
 
     //printf("MATRIZ (escalar *AxB) + CxD\n");
     //recorrerArreglo(R,N,ORDENXCOLUMNAS);
 
     //Finaliza conteo de tiempo
-    endtime = dwalltime() - timetick;
+    //endtime = dwalltime() - timetick;
     //printf("Tiempo en segundos %f\n", endtime);
 
+    timelog_total();
+
     //Obtención del resultado
+    /*
     char file[10000];
     bzero(file,10000);
     char temp_str[2000];
@@ -176,6 +205,7 @@ int main(int argc, char*argv[]){
     strcat(file, temp_str);
     sprintf(temp_str, "-----------------------------------------------\n\n");
     strcat(file, temp_str);
+    */
 
     //Liberando memoria
     free(A);
@@ -185,8 +215,33 @@ int main(int argc, char*argv[]){
     free(D);
     free(CxD);
 
-    printf("%s", file);
-    return(0);
+    return 0;
+}
+
+/* Funciones para depurar el tiempo de ejecución */
+double dwalltime() {
+    double sec;
+    struct timeval tv;
+
+    gettimeofday(&tv,NULL);
+    sec = tv.tv_sec + tv.tv_usec/1000000.0;
+    return sec;
+}
+
+void timelog_start() {
+    stime = dwalltime();
+}
+
+void timelog_total() {
+    printf("Tiempo total: %.02fms\n", ttime * 1000.0);
+}
+
+void timelog(const char *desc) {
+    double time = dwalltime() - stime;
+    ttime += time;
+
+    if (desc)
+        printf("Tiempo '%s': %.02fms\n", desc, time * 1000.0);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -211,86 +266,80 @@ int getRandomNumber(){
     return rand() % 41 + 1;
 }
 
-void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double escalar){
-  int i, j, k;    /* Guess what... */
+void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double escalar) {
+    int i, j, k, offI, offJ;    /* Guess what... */
   
-  for (i = 0; i < n; i += bs)
-  {
-    for (j = 0; j < n; j += bs)
+    for (i = 0; i < n; i += bs)
     {
-      for  (k = 0; k < n; k += bs)
-      {
-        blkmulWithEscalar(&a[i*n + k], &b[j*n + k], &c[i*n + j], n, bs, escalar);
-      }
+        offI = i * n;
+        for (j = 0; j < n; j += bs)
+        {
+            offJ = j * n;
+            for (k = 0; k < n; k += bs)
+            {
+                blkmulWithEscalar(&a[offI + k], &b[offJ + k], &c[offI + j], n, bs, escalar);
+            }
+        }
     }
-  }
 }
 
 /*****************************************************************/
 
 /* Multiply (block)submatrices */
 void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double escalar){
-  int i, j, k;    /* Guess what... again... */
+    int i, j, k, offI, offJ;    /* Guess what... again... */
 
-  for (i = 0; i < bs; i++)
-  {
-    for (j = 0; j < bs; j++)
+    for (i = 0; i < bs; i++)
     {
-      for  (k = 0; k < bs; k++)
-      {
-        cblk[i*n + j] += ablk[i*n + k] * bblk[j*n + k];
-      }
-      cblk[i*n + j] *= escalar;
+        int offI = i * n;
+        for (j = 0; j < bs; j++)
+        {
+            int offJ = i * n;
+            for (k = 0; k < bs; k++)
+            {
+                cblk[offI + j] += ablk[offI + k] * bblk[offJ + k];
+            }
+            cblk[offI + j] *= escalar;
+        }
     }
-  }
 }
 
 void matIntmulblks(double *a, int *b, double *c, int n, int bs){
-  int i, j, k;    /* Guess what... */
+    int i, j, k, offI, offJ;    /* Guess what... */
 
-  /* Init matrix c, just in case */  
-  //initvalmat(c, n, 0.0, 0);
-  
-  for (i = 0; i < n; i += bs)
-  {
-    for (j = 0; j < n; j += bs)
+    for (i = 0; i < n; i += bs)
     {
-      for  (k = 0; k < n; k += bs)
-      {
-        blkmulwithIntMat(&a[i*n + k], &b[j*n + k], &c[i*n + j], n, bs);
-      }
+        offI = i * n;
+        for (j = 0; j < n; j += bs)
+        {
+            offJ = j * n;
+            for (k = 0; k < n; k += bs)
+            {
+                blkmulwithIntMat(&a[offI + k], &b[offJ + k], &c[offI + j], n, bs);
+            }
+        }
     }
-  }
 }
 
 /*****************************************************************/
 
 /* Multiply (block)submatrices */
 void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs){
-  int i, j, k;    /* Guess what... again... */
+    int i, j, k, offI, offJ;    /* Guess what... again... */
 
-  for (i = 0; i < bs; i++)
-  {
-    for (j = 0; j < bs; j++)
+    for (i = 0; i < bs; i++)
     {
-      for  (k = 0; k < bs; k++)
-      {
-        cblk[i*n + j] += ablk[i*n + k] * bblk[j*n + k];
-      }
+        offI = i * n;
+        for (j = 0; j < bs; j++)
+        {
+            offJ = j * n;
+            for (k = 0; k < bs; k++)
+            {
+                cblk[offI + j] += ablk[offI + k] * bblk[offJ + k];
+            }
+        }
     }
-  }
 }
-
-//Para calcular tiempo
-double dwalltime(){
-    double sec;
-    struct timeval tv;
-
-    gettimeofday(&tv,NULL);
-    sec = tv.tv_sec + tv.tv_usec/1000000.0;
-    return sec;
-}
-
 
 //Pruebas
 
