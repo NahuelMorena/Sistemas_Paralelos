@@ -1,21 +1,22 @@
 #!/bin/bash
 
 #Se compila el programa 
-gcc -o matrices matrices.c 
+gcc -O3 -o matrices matrices.c 
 
 #Se setean variables
 array=(512 1024 2048 4096)
+bs_array=(4 8 16 32 64)
+ofile="resultado.csv"
 
 #Se crea el informe
-> informe.txt
-echo -e "Estudio de tiempos de ejecución del algoritmo de matrices con diferentes dimenciones\n\n" >> informe.txt
-
+echo "N;BS;time" > ${ofile}
 
 #Comienzan las pruebas
 for size in ${array[@]}; do 
-    let aux=$size/2
-    echo "Prueba de ejecución con matrices de dimensión de ${size} y bloques de ${aux}"
-    ./matrices ${size} ${aux} >> informe.txt
+    for bs in ${bs_array[@]}; do
+    	echo "Prueba de ejecución con matrices de dimensión de ${size} y tamaño de bloque ${bs}"
+    	echo "${size};${bs};$(./matrices ${size} ${bs} | tr '.' ',')" >> ${ofile}
+     done
 done
 
-echo "Finalizan las pruebas, resultados en informe.txt"
+echo "Finalizan las pruebas, resultados en ${ofile}"

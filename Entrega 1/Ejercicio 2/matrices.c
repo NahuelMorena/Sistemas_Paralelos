@@ -5,12 +5,14 @@
 //Utilizado para obtener numeros random
 #include <time.h>
 
+#define DEBUG 0
+
 //Declaración de funciones 
 double dwalltime();
 void timelog_start();
 void timelog_total();
 void timelog(const char *desc);
-static double stime, ttime = 0.0;
+static double start_time, total_time = 0.0;
 
 int getRandomNumber();
 
@@ -30,10 +32,14 @@ int main(int argc, char*argv[]){
 
     //Tomar parametro n para el tamaño de las matrices NxN
     int N = atoi(argv[1]);
+    #if DEBUG == 1
     printf("N = %i\n",N);
+    #endif
 
     int bs = atoi(argv[2]);
+    #if DEBUG == 1
     printf("bs = %i\n",bs);
+    #endif
 
     //Asignar matrices (Se utiliza alternativa 4 mostrada en la teoria)
     double *A,*B,*C,*R,*CxD;
@@ -179,19 +185,25 @@ double dwalltime() {
 }
 
 void timelog_start() {
-    stime = dwalltime();
+    start_time = dwalltime();
 }
 
 void timelog_total() {
-    printf("Tiempo total: %.02fms\n\n\n", ttime * 1000.0);
+    #if DEBUG == 1
+    printf("Tiempo total: %.02fms\n\n\n", total_time * 1000.0);
+    #else
+    printf("%f\n", total_time);
+    #endif
 }
 
 void timelog(const char *desc) {
-    double time = dwalltime() - stime;
-    ttime += time;
+    double time = dwalltime() - start_time;
+    total_time += time;
 
+    #if DEBUG == 1
     if (desc)
         printf("Tiempo '%s': %.02fms\n", desc, time * 1000.0);
+    #endif
 }
 
 /*****************************************************************/
