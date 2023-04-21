@@ -235,7 +235,7 @@ void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, 
     for (i = 0; i < bs; i++){
         int offI = i * n;
         for (j = 0; j < bs; j++){
-            int offJ = i * n;
+            int offJ = j * n;
             for (k = 0; k < bs; k++){
                 cblk[offI + j] += ablk[offI + k] * bblk[offJ + k];
             }
