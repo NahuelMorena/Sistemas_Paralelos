@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/time.h>
+#include <time.h>
 
 #define DEBUG 0
 
@@ -11,18 +13,17 @@ void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, doubl
 void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double scalar);
 void matIntmulblks(double *a, int *b, double *c, int n, int bs, int start_block, int end_block);
 void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs);
-
-//mutex
-pthread_mutex_t promA_lock, promB_lock;
-//barrier
-pthread_barrier_t barrier;
-
+double dwalltime();
 //Variables compartidas
 int block_size_by_threads, N, size, bs;
 double promA, promB, maxA, maxB, scalar;
 double minA, minB;
 double *A,*B,*C,*R,*CxD;
 int *D;
+//mutex
+pthread_mutex_t promA_lock, promB_lock;
+//barrier
+pthread_barrier_t barrier;
 
 int main(int argc, char*argv[]){
     //Validar parametros
@@ -44,6 +45,7 @@ int main(int argc, char*argv[]){
 
     //declaración de variables
     int i;
+    double timetick, endtime;
     size = N*N;
     A=(double*)malloc(sizeof(double)*size);
     B=(double*)malloc(sizeof(double)*size);
@@ -79,6 +81,9 @@ int main(int argc, char*argv[]){
 
     block_size_by_threads = N/num_threads;
     
+    //Empieza a contar el tiempo
+    timetick = dwalltime();
+
     //Crear hilos
     for (int i = 0; i < num_threads; i++){
         ids[i] = i;
@@ -90,14 +95,20 @@ int main(int argc, char*argv[]){
         pthread_join(threads[i], NULL);
     }
 
-    printf("valor de maxA %f\n", maxA);
-    printf("valor de maxB %f\n", maxB);
-    printf("valor de minA %f\n", minA);
-    printf("valor de minB %f\n", minB);
-    printf("valor de promA %f\n", promA);
-    printf("valor de promB %f\n", promB);
-    printf("valor del escalar %f\n", scalar);
+    //Detener el tiempo
+    endtime = dwalltime();
+    
+    printf("Tiempo empleado en segundos %f\n", endtime - timetick);
 
+    #if DEBUG == 1
+        printf("valor de maxA %f\n", maxA);
+        printf("valor de maxB %f\n", maxB);
+        printf("valor de minA %f\n", minA);
+        printf("valor de minB %f\n", minB);
+        printf("valor de promA %f\n", promA);
+        printf("valor de promB %f\n", promB);
+        printf("valor del escalar %f\n", scalar);
+    #endif
     //for(int i = 0; i<N; i++){
     //    int cont = 0;
     //    for (int j = 0; j < N; j++){
@@ -131,7 +142,9 @@ void* calculate_R(void* ptr){
     p = (int*) ptr;
     id = *p;
 
-    printf("empieza ejecución hilo %i\n",id);
+    #if DEBUG == 1
+        printf("empieza ejecución hilo %i\n",id);
+    #endif
 
     int start_block = block_size_by_threads * id;
     int end_block = block_size_by_threads * (id + 1);
@@ -160,7 +173,9 @@ void* calculate_R(void* ptr){
     } 
 
     pthread_mutex_lock(&promA_lock);
-    printf("soy hilo %d localMInA= %f, valor de minA= %f\n",id, localMinA, minA);
+    #if DEBUG == 1
+        printf("soy hilo %d localMInA= %f, valor de minA= %f\n",id, localMinA, minA);
+    #endif
     if (localMinA < minA){
         minA = localMinA;
     }
@@ -190,10 +205,10 @@ void* calculate_R(void* ptr){
         }
     } 
 
-    printf("soy el hilo %d\n", id);
-
     pthread_mutex_lock(&promB_lock);
-    printf("soy hilo %d localMInB= %f, valor de minB= %f\n",id, localMinB, minB);
+    #if DEBUG == 1
+        printf("soy hilo %d localMInB= %f, valor de minB= %f\n",id, localMinB, minB);
+    #endif
     if (localMinB < minB){
         minB = localMinB;
     }
@@ -310,4 +325,16 @@ void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs){
             }
         }
     }
+}
+
+/*****************************************************************/
+
+/* Funcion para depurar el tiempo de ejecución */
+double dwalltime() {
+    double sec;
+    struct timeval tv;
+
+    gettimeofday(&tv,NULL);
+    sec = tv.tv_sec + tv.tv_usec/1000000.0;
+    return sec;
 }
