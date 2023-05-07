@@ -5,19 +5,20 @@
 #define DEBUG 0
 
 //Declaración de funciones
-
-int getRandomNumber();
-
 void* calculate_R(void* id);
+int getRandomNumber();
+void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double escalar, int start_block, int end_block);
+void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double scalar);
+void matIntmulblks(double *a, int *b, double *c, int n, int bs, int start_block, int end_block);
+void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs);
 
 //mutex
 pthread_mutex_t promA_lock, promB_lock;
-
 //barrier
 pthread_barrier_t barrier;
 
 //Variables compartidas
-int block_size_by_threads, N, size;
+int block_size_by_threads, N, size, bs;
 double promA, promB, maxA, maxB, scalar;
 double minA, minB;
 double *A,*B,*C,*R,*CxD;
@@ -32,25 +33,18 @@ int main(int argc, char*argv[]){
 
     //Tomar argumentos del main 
     N = atoi(argv[1]);
-    #if DEBUG == 1
-    printf("N = %i\n",N);
-    #endif
-
-    int bs = atoi(argv[2]);
-    #if DEBUG == 1
-    printf("bs = %i\n",bs);
-    #endif
-
+    bs = atoi(argv[2]);
     int num_threads = atoi(argv[3]);
+
     #if DEBUG == 1
-    printf("NUM_THREADS = %i\n", num_threads);
+        printf("N = %i\n",N);
+        printf("bs = %i\n",bs);
+        printf("NUM_THREADS = %i\n", num_threads);
     #endif
 
-    //indices
+    //declaración de variables
     int i;
-
     size = N*N;
-
     A=(double*)malloc(sizeof(double)*size);
     B=(double*)malloc(sizeof(double)*size);
     C=(double*)malloc(sizeof(double)*size);
@@ -103,6 +97,17 @@ int main(int argc, char*argv[]){
     printf("valor de promA %f\n", promA);
     printf("valor de promB %f\n", promB);
     printf("valor del escalar %f\n", scalar);
+
+    //for(int i = 0; i<N; i++){
+    //    int cont = 0;
+    //    for (int j = 0; j < N; j++){
+    //        printf("%d ||", D[j*N+i]);
+    //        cont++;
+    //        if (cont == N){
+    //            printf("\n");
+    //        }
+    //    }
+    //}
 
     //Liberando memoria
     free(A);
@@ -208,6 +213,34 @@ void* calculate_R(void* ptr){
 
     //Hasta este punto se calculo es escalar
 
+    //Multiplicación de AxB
+    matmulblksWithEscalar(A, B, R, N, bs, scalar, start_block, end_block);
+
+    //Pot2(D) 
+    for(int j=start_block; j < end_block; j++) {
+        offJ = j*N;
+        for(int i=0;i<N;i++) {
+            int v = D[i+offJ];
+            D[i+offJ] = v * v;
+        }
+    }
+
+    pthread_barrier_wait(&barrier);
+
+    //Multiplicación CxD
+    matIntmulblks(C, D, CxD, N, bs, start_block, end_block);
+
+    pthread_barrier_wait(&barrier);
+
+    //Suma entre (escalar*AxB) + CxD
+    for (i = start_block; i < end_block; i++) {
+        offI = i * N;
+        for (j=0; j<N; j++) {
+            R[offI+j] += CxD[offI+j];
+        }
+    }
+
+
     pthread_exit(0);
 }
 
@@ -218,3 +251,63 @@ int getRandomNumber(){
 }
 
 /*****************************************************************/
+
+//Multiplicación de matrices y escalar
+void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double scalar, int start_block, int end_block) {
+    int i, j, k, offI, offJ;   
+  
+    for (i = start_block; i < end_block; i += bs){
+        offI = i * n;
+        for (j = 0; j < n; j += bs){
+            offJ = j * n;
+            for (k = 0; k < n; k += bs){
+                blkmulWithEscalar(&a[offI + k], &b[offJ + k], &c[offI + j], n, bs, scalar);
+            }
+        }
+    }
+}
+
+void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double scalar){
+    int i, j, k, offI, offJ;    
+
+    for (i = 0; i < bs; i++){
+        int offI = i * n;
+        for (j = 0; j < bs; j++){
+            int offJ = j * n;
+            for (k = 0; k < bs; k++){
+                cblk[offI + j] += ablk[offI + k] * bblk[offJ + k];
+            }
+            cblk[offI + j] *= scalar;
+        }
+    }
+}
+
+/*****************************************************************/
+
+void matIntmulblks(double *a, int *b, double *c, int n, int bs, int start_block, int end_block){
+    int i, j, k, offI, offJ;    
+
+    for (i = start_block; i < end_block; i += bs){
+        offI = i * n;
+        for (j = 0; j < n; j += bs){
+            offJ = j * n;
+            for (k = 0; k < n; k += bs){
+                blkmulwithIntMat(&a[offI + k], &b[offJ + k], &c[offI + j], n, bs);
+            }
+        }
+    }
+}
+
+void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs){
+    int i, j, k, offI, offJ;  
+
+    for (i = 0; i < bs; i++){
+        offI = i * n;
+        for (j = 0; j < bs; j++){
+            offJ = j * n;
+            for (k = 0; k < bs; k++){
+                cblk[offI + j] += ablk[offI + k] * bblk[offJ + k];
+            }
+        }
+    }
+}
