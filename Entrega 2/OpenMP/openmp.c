@@ -33,8 +33,8 @@ int main(int argc, char*argv[]){
 
 
     //Asignar matrices (Se utiliza alternativa 4 mostrada en la teoria)
-    double *A,*B,*C,*R,*CxD;
-    int *D;
+    double *A,*B,*C,*Rp, *Rs, *CxD;
+    int *D, *Dpow2;
 
     //declaración de variables
     int i, j, k, offI, offJ;
@@ -45,8 +45,10 @@ int main(int argc, char*argv[]){
     A=(double*)malloc(sizeof(double)*size);
     B=(double*)malloc(sizeof(double)*size);
     C=(double*)malloc(sizeof(double)*size);
-    R=(double*)malloc(sizeof(double)*size);
+    Rp=(double*)malloc(sizeof(double)*size);
+    Rs=(double*)malloc(sizeof(double)*size);
     D=(int*)malloc(sizeof(int)*size);
+    Dpow2=(int*)malloc(sizeof(int)*size);
     CxD=(double*)malloc(sizeof(double)*size);
 
     double maxA, minA, promA = 0.0;
@@ -59,12 +61,17 @@ int main(int argc, char*argv[]){
         A[i] = 1.0;
         B[i] = 1.0;
         C[i] = 1.0;
-        R[i] = 0.0;
+        Rp[i] = 0.0;
+        Rs[i] = 0.0;
         CxD[i] = 0.0;
+        Dpow2[i] = 0;
         D[i] = getRandomNumber();
     } 
 
-    //OpenMP
+    /**************************************************************************************/
+                                        //OpenMP
+    /**************************************************************************************/
+ 
     omp_set_num_threads(num_threads);
 
     //Empieza a contar el tiempo
@@ -77,7 +84,8 @@ int main(int argc, char*argv[]){
     {
         #pragma omp for reduction(max:maxA) reduction(min:minA) reduction(+:promA) nowait   
         for(i=0;i<N;i++) {
-            int tid = omp_get_thread_num();
+            //int tid = omp_get_thread_num();
+            offI = i * N;
             for(j=0;j<N;j++) {
 	            item = A[offI+j];
                 if (item < minA) {
@@ -115,14 +123,13 @@ int main(int argc, char*argv[]){
     #pragma omp parallel private(i, j, k, offI, offJ)
     {   
         //Multiplicación AxB
-        //matmulblksWithEscalar(A, B, R, N, bs, escalar);
         #pragma omp for nowait
         for (i = 0; i < N; i += bs){
             offI = i * N;
             for (j = 0; j < N; j += bs){
                 offJ = j * N;
                 for (k = 0; k < N; k += bs){
-                    blkmulWithEscalar(&A[offI + k], &B[offJ + k], &R[offI + j], N, bs, scalar);
+                    blkmulWithEscalar(&A[offI + k], &B[offJ + k], &Rp[offI + j], N, bs, scalar);
                 }
             }
         }
@@ -133,7 +140,7 @@ int main(int argc, char*argv[]){
             offJ = j*N;
             for(i=0;i<N;i++) {
                 int v = D[i+offJ];
-                D[i+offJ] = v * v;
+                Dpow2[i+offJ] = v * v;
             }
         }
 
@@ -144,7 +151,7 @@ int main(int argc, char*argv[]){
             for (j = 0; j < N; j += bs){
                 offJ = j * N;
                 for (k = 0; k < N; k += bs){
-                    blkmulwithIntMat(&C[offI + k], &D[offJ + k], &CxD[offI + j], N, bs);
+                    blkmulwithIntMat(&C[offI + k], &Dpow2[offJ + k], &CxD[offI + j], N, bs);
                 }
             }
         }
@@ -154,7 +161,7 @@ int main(int argc, char*argv[]){
         for (i=0; i<N; i++) {
             offI = i * N;
             for (j=0; j<N; j++) {
-                R[offI+j] += CxD[offI+j];
+                Rp[offI+j] += CxD[offI+j];
             }
         }
     }
@@ -162,7 +169,218 @@ int main(int argc, char*argv[]){
     //Detener el tiempo
     endtime = dwalltime();
 
+    printf("Operación paralela con OpenMP\n");
     printf("Tiempo empleado en segundos %f\n", endtime - timetick);
+
+    /**************************************************************************************/
+                                        //Secuencial
+    /**************************************************************************************/
+    
+    promA = promB = 0.0;
+
+    //Reinicializar matrices 
+    for (i=0; i<size; i++){
+        Dpow2[i] = 0;
+        CxD[i] = 0.0;
+    } 
+
+    //Empieza a contar el tiempo
+    timetick = dwalltime();
+    
+    //operar matrices 
+
+    //obteniendo minA, maxA y promA
+    minA = maxA = A[0];
+    for(i=0;i<N;i++) {
+        offI = i * N;
+        for(j=0;j<N;j++) {
+	        item = A[offI+j];
+            if (item < minA) {
+                minA = item;
+            }
+            if (item > maxA) {
+                maxA = item;
+            }
+            promA += item;
+        }
+    } 
+    promA = promA/(size);
+
+    //obteniendo minB, maxB y promB
+    minB = maxB = B[0];
+    for(j=0;j<N;j++) {
+        offJ = j * N;
+        for(i=0;i<N;i++) {
+	        item = B[i+offJ];
+            if (item < minB) {
+                minB = item;
+            }
+            if (item > maxB) {
+                maxB = item;
+            }
+            promB += item;
+        }
+    } 
+    promB = promB/(size);
+
+    scalar = (maxA * maxB - minA * minB) / (promA * promB);
+
+    /*
+    printf("valor de A\n");
+    for(int i = 0; i<N; i++){
+        int cont = 0;
+        for (int j = 0; j < N; j++){
+            printf("%f ||", A[i*N+j]);
+            cont++;
+            if (cont == N){
+                printf("\n");
+            }
+        }
+    }
+    */
+    /*
+    printf("valor de B\n");
+    for(int j = 0; j<N; j++){
+        int cont = 0;
+        for (int i = 0; i < N; i++){
+            printf("%f ||", B[j*N+i]);
+            cont++;
+            if (cont == N){
+                printf("\n");
+            }
+        }
+    }
+    */
+    //Multiplicación AxB*scalar
+    for (i = 0; i < N; i += bs){
+        offI = i * N;
+        for (j = 0; j < N; j += bs){
+            offJ = j * N;
+            for (k = 0; k < N; k += bs){
+                blkmulWithEscalar(&A[offI + k], &B[offJ + k], &Rs[offI + j], N, bs, scalar);
+            }
+        }        
+    }
+    /*
+    printf("valor de AxB\n");
+    for(int i = 0; i<N; i++){
+        int cont = 0;
+        for (int j = 0; j < N; j++){
+            printf("%f ||", Rs[i*N+j]);
+            cont++;
+            if (cont == N){
+                printf("\n");
+            }
+        }
+    }
+    */
+
+    /*
+    printf("valor de D\n");
+    for(int j = 0; j<N; j++){
+        int cont = 0;
+        for (int i = 0; i < N; i++){
+            printf("%d ||", D[j*N+i]);
+            cont++;
+            if (cont == N){
+                printf("\n");
+            }
+        }
+    }
+    */
+
+    //Pot2(D)  
+    for(int j=0;j<N;j++) {
+        offJ = j*N;
+        for(int i=0;i<N;i++) {
+            int v = D[i+offJ];
+            Dpow2[i+offJ] = v * v;
+        }
+    }
+
+    /*
+    printf("valor de Dpow2\n");
+    for(int j = 0; j<N; j++){
+        int cont = 0;
+        for (int i = 0; i < N; i++){
+            printf("%d ||", Dpow2[j*N+i]);
+            cont++;
+            if (cont == N){
+                printf("\n");
+            }
+        }
+    }
+    */
+    //Multiplicación CxD
+    for (i = 0; i < N; i += bs){
+        offI = i * N;
+        for (j = 0; j < N; j += bs){
+            offJ = j * N;
+            for (k = 0; k < N; k += bs){
+                blkmulwithIntMat(&C[offI + k], &Dpow2[offJ + k], &CxD[offI + j], N, bs);
+            }
+        }
+    }
+
+    /*
+    printf("valor de C\n");
+    for(int i = 0; i<N; i++){
+        int cont = 0;
+        for (int j = 0; j < N; j++){
+            printf("%f ||", C[i*N+j]);
+            cont++;
+            if (cont == N){
+                printf("\n");
+            }
+        }
+    }
+    */
+    /*
+    printf("valor de CxD\n");
+    for(int i = 0; i<N; i++){
+        int cont = 0;
+        for (int j = 0; j < N; j++){
+            printf("%f ||", CxD[i*N+j]);
+            cont++;
+            if (cont == N){
+                printf("\n");
+            }
+        }
+    }
+    */
+
+    //Suma entre (escalar*AxB) + CxD
+    for (i=0; i<N; i++) {
+        offI = i * N;
+        for (j=0; j<N; j++) {
+            Rs[offI+j] += CxD[offI+j];
+        }
+    }
+
+    //Detener el tiempo
+    endtime = dwalltime();
+
+    printf("Operación secuencial\n");
+    printf("Tiempo empleado en segundos %f\n", endtime - timetick);
+
+    //Comparar resultados
+
+    int ok = 1;
+    for (i=0; i<N; i++) {
+        if (Rp[i] != Rs[i]){
+            printf("Valor de Rp: %f != valor de Rs: %f en el indice %i\n",Rp[i], Rs[i],i);
+            ok = 0;
+            break;
+        }
+    }
+
+    if (ok){
+        printf("Multiplicación de matrices con resultados correctos\n");
+    } else {
+        printf("Multiplicación de matrices con resultados incorrectos\n");
+    }
+
+
         
     #if DEBUG == 1
         printf("valor de maxA: %f\n",maxA);
@@ -173,12 +391,16 @@ int main(int argc, char*argv[]){
         printf("valor del promB: %f\n",promB);
         printf("valor del escalar: %f\n",scalar);
     #endif
+
+
     //Liberando memoria
     free(A);
     free(B);
     free(C);
-    free(R);
+    free(Rp);
+    free(Rs);
     free(D);
+    free(Dpow2);
     free(CxD);
 
     return 0;
