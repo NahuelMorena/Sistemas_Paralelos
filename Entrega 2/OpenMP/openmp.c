@@ -1,13 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
+#include <sys/time.h>
 #include <time.h>
 
-#define DEBUG 1
+#define DEBUG 0
 
 //Declaración de funciones 
 
 int getRandomNumber();
+double dwalltime();
 void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double scalar);
 void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs);
 
@@ -34,9 +36,10 @@ int main(int argc, char*argv[]){
     double *A,*B,*C,*R,*CxD;
     int *D;
 
-    //indices
+    //declaración de variables
     int i, j, k, offI, offJ;
-
+    double timetick, endtime;
+    double item;
     int size = N*N;
 
     A=(double*)malloc(sizeof(double)*size);
@@ -64,7 +67,9 @@ int main(int argc, char*argv[]){
     //OpenMP
     omp_set_num_threads(num_threads);
 
-    double item;
+    //Empieza a contar el tiempo
+    timetick = dwalltime();
+    
     //Operar matrices
     minA = maxA = A[0];
     minB = maxB = B[0];
@@ -100,8 +105,8 @@ int main(int argc, char*argv[]){
             }
         } 
     }
-    printf("valor preliminar de promA %f\n",promA);
-    printf("valor preliminar de promB %f\n",promB);
+    //printf("valor preliminar de promA %f\n",promA);
+    //printf("valor preliminar de promB %f\n",promB);
     promA = promA/(size);
     promB = promB/(size);
 
@@ -153,16 +158,21 @@ int main(int argc, char*argv[]){
             }
         }
     }
+
+    //Detener el tiempo
+    endtime = dwalltime();
+
+    printf("Tiempo empleado en segundos %f\n", endtime - timetick);
         
-
-    printf("valor de maxA: %f\n",maxA);
-    printf("valor del minA: %f\n",minA);
-    printf("valor del maxB: %f\n",maxB);
-    printf("valor del minB: %f\n",minB);
-    printf("valor del promA: %f\n",promA);
-    printf("valor del promB: %f\n",promB);
-    printf("valor del escalar: %f\n",scalar);
-
+    #if DEBUG == 1
+        printf("valor de maxA: %f\n",maxA);
+        printf("valor del minA: %f\n",minA);
+        printf("valor del maxB: %f\n",maxB);
+        printf("valor del minB: %f\n",minB);
+        printf("valor del promA: %f\n",promA);
+        printf("valor del promB: %f\n",promB);
+        printf("valor del escalar: %f\n",scalar);
+    #endif
     //Liberando memoria
     free(A);
     free(B);
@@ -210,4 +220,16 @@ void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs){
             }
         }
     }
+}
+
+/*****************************************************************/
+
+/* Funcion para depurar el tiempo de ejecución */
+double dwalltime() {
+    double sec;
+    struct timeval tv;
+
+    gettimeofday(&tv,NULL);
+    sec = tv.tv_sec + tv.tv_usec/1000000.0;
+    return sec;
 }
