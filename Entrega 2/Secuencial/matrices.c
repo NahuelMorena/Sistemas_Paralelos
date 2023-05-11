@@ -7,22 +7,15 @@
 
 #define DEBUG 0
 
+static double start_time, total_time = 0.0;
+
 //Declaración de funciones 
 double dwalltime();
 void timelog_start();
 void timelog_total();
 void timelog(const char *desc);
-static double start_time, total_time = 0.0;
 
-int getRandomNumber();
-
-void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double escalar);
-void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double escalar);
-
-void matIntmulblks(double *a, int *b, double *c, int n, int bs);
-void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs);
-
-static void matreadrow(FILE *f, void *mat, int size, int n) 
+static void matReadRow(FILE *f, void *mat, int size, int n) 
 {
     for (int i = 0; i < n; i++)
     {
@@ -34,7 +27,7 @@ static void matreadrow(FILE *f, void *mat, int size, int n)
     }
 }
 
-static void matreadcol(FILE *f, void *mat, int size, int n) 
+static void matReadCol(FILE *f, void *mat, int size, int n) 
 {
     for (int i = 0; i < n; i++)
     {
@@ -42,6 +35,81 @@ static void matreadcol(FILE *f, void *mat, int size, int n)
         {
             void *p = mat + ((j * n) + i) * size;
             fread(p, size, 1, f);
+        }
+    }
+}
+
+static void blkMultDD(double *r, double *a, double *b, int size, int blksize)
+{
+    int i, j, k;
+    for (i = 0; i < blksize; i++)
+    {
+        for (j = 0; j < blksize; j++)
+        {
+            for (k = 0; k < blksize; k++)
+            {
+                r[i*size+j] += a[i*size+k] * b[j*size+k];
+            }
+        }
+    }
+}
+
+static void blkMultDS(double *r, double *a, double s, int size, int blksize)
+{
+    int i, j;
+    for (i = 0; i < blksize; i++)
+    {
+        for (j = 0; j < blksize; j++)
+        {
+            r[i*size+j] = a[i*size+j] * s;
+        }
+    }
+}
+
+static void matMultDDS(double *r, double *a, double *b, double s, int size, int blksize)
+{
+    int i, j, k;
+    for (i = 0; i < size; i += blksize)
+    {
+        for (j = 0; j < size; j += blksize)
+        {
+            r[i*size+j] = 0.0;
+            for (k = 0; k < size; k += blksize)
+            {
+                blkMultDD(&r[i*size+j], &a[i*size+k], &b[j*size+k], size, blksize);
+            }
+            blkMultDS(&r[i*size+j], &r[i*size+j], s, size, blksize);
+        }
+    }
+}
+
+static void blkMultDI(double *r, double *a, int *b, int size, int blksize)
+{
+    int i, j, k;
+    for (i = 0; i < blksize; i++)
+    {
+        for (j = 0; j < blksize; j++)
+        {
+            for (k = 0; k < blksize; k++)
+            {
+                r[i*size+j] += a[i*size+k] * b[j*size+k];
+            }
+        }
+    }
+}
+
+static void matMultDI(double *r, double *a, int *b, int size, int blksize)
+{
+    int i, j, k;
+    for (i = 0; i < size; i += blksize)
+    {
+        for (j = 0; j < size; j += blksize)
+        {
+            r[i*size+j] = 0.0;
+            for (k = 0; k < size; k += blksize)
+            {
+                blkMultDI(&r[i*size+j], &a[i*size+k], &b[j*size+k], size, blksize);
+            }
         }
     }
 }
@@ -97,26 +165,19 @@ int main(int argc, char*argv[]){
     double maxA, minA, promA = 0.0;
     double maxB, minB, promB = 0.0;
 
-    //Inicializar matrices 
     srand(time(NULL));
 
     if (ifile && ofile) {
-        matreadrow(ifile, A, sizeof(double), N);
-        matreadcol(ifile, B, sizeof(double), N);
-        matreadrow(ifile, C, sizeof(double), N);
-        matreadcol(ifile, D, sizeof(int), N);
-        for (i=0; i<size; i++) {
-            R[i] = 0.0;
-            CxD[i] = 0.0;
-        }
+        matReadRow(ifile, A, sizeof(double), N);
+        matReadCol(ifile, B, sizeof(double), N);
+        matReadRow(ifile, C, sizeof(double), N);
+        matReadCol(ifile, D, sizeof(int), N);
     } else {
-        for (i=0; i<size; i++) {
+        for (i = 0; i < size; i++) {
             A[i] = 1.0;
             B[i] = 1.0;
             C[i] = 1.0;
-            R[i] = 0.0;
-            CxD[i] = 0.0;
-            D[i] = getRandomNumber();
+            D[i] = rand() % 41 + 1;
         }
     }
 
@@ -171,9 +232,8 @@ int main(int argc, char*argv[]){
     timelog("e = (maxA * maxB - minA * minB) / (promA * promB)");
 
     //Multiplicación AxB
-
     timelog_start();
-    matmulblksWithEscalar(A, B, R, N, bs, escalar);
+    matMultDDS(R, A, B, escalar, N, bs);
     timelog("R = (AxB) * e");
 
     //Pot2(D)  
@@ -187,13 +247,10 @@ int main(int argc, char*argv[]){
     }
     timelog("D = Pot2(D)");
 
-
     //Multiplicación CxD
-
     timelog_start();
-    matIntmulblks(C, D, CxD, N, bs);
+    matMultDI(CxD, C, D, N, bs);
     timelog("CxD = CxD");
-
 
     //Suma entre (escalar*AxB) + CxD
     timelog_start();
@@ -259,71 +316,4 @@ void timelog(const char *desc) {
     if (desc)
         printf("Tiempo '%s': %.02fms\n", desc, time * 1000.0);
     #endif
-}
-
-/*****************************************************************/
-
-int getRandomNumber(){
-    return rand() % 41 + 1;
-}
-
-/*****************************************************************/
-
-//Multiplicación de matrices y escalar
-void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double escalar) {
-    int i, j, k, offI, offJ;  
-
-    for (i = 0; i < n; i += bs){
-        offI = i * n;
-        for (j = 0; j < n; j += bs){
-            offJ = j * n;
-            for (k = 0; k < n; k += bs){
-                blkmulWithEscalar(&a[offI + k], &b[offJ + k], &c[offI + j], n, bs, escalar);
-            }
-            c[offI + j] *= escalar;
-        }
-    }
-}
-
-void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double escalar){
-    int i, j, k, offI, offJ;    
-
-    for (i = 0; i < bs; i++){
-        int offI = i * n;
-        for (j = 0; j < bs; j++){
-            int offJ = j * n;
-            for (k = 0; k < bs; k++){
-                cblk[offI + j] += ablk[offI + k] * bblk[offJ + k];
-            }
-        }
-    }
-}
-
-//Multiplicación de matrices 
-void matIntmulblks(double *a, int *b, double *c, int n, int bs){
-    int i, j, k, offI, offJ;    
-
-    for (i = 0; i < n; i += bs){
-        offI = i * n;
-        for (j = 0; j < n; j += bs){
-            offJ = j * n;
-            for (k = 0; k < n; k += bs){
-                blkmulwithIntMat(&a[offI + k], &b[offJ + k], &c[offI + j], n, bs);
-            }
-        }
-    }
-}
-
-void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs){
-    int i, j, k, offI, offJ;  
-
-    for (i = 0; i < bs; i++){
-        offI = i * n;
-        for (j = 0; j < bs; j++){
-            offJ = j * n;
-            for (k = 0; k < bs; k++){
-                cblk[offI + j] += ablk[offI + k] * bblk[offJ + k];
-            }
-        }
-    }
 }
