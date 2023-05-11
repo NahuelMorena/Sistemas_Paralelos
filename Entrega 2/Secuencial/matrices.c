@@ -22,12 +22,47 @@ void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, 
 void matIntmulblks(double *a, int *b, double *c, int n, int bs);
 void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs);
 
+static void matreadrow(FILE *f, void *mat, int size, int n) 
+{
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            void *p = mat + ((i * n) + j) * size;
+            fread(p, size, 1, f);
+        }
+    }
+}
+
+static void matreadcol(FILE *f, void *mat, int size, int n) 
+{
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            void *p = mat + ((j * n) + i) * size;
+            fread(p, size, 1, f);
+        }
+    }
+}
 
 int main(int argc, char*argv[]){
     //Validar parametros
     if (argc < 3){
-        fprintf(stderr, "usage %s matrix_size block_size\n",argv[0]);
+        fprintf(stderr, "usage %s matrix_size block_size [input_file output_file]\n",argv[0]);
         exit(1);
+    }
+
+    FILE *ifile, *ofile;
+    if (argc >= 5) {
+        ifile = fopen(argv[3], "rb");
+        ofile = fopen(argv[4], "wb");
+        if (!ifile)
+            fprintf(stderr, "no se pudo abrir el archivo de entrada '%s'\n", argv[3]);
+        if (!ofile)
+            fprintf(stderr, "no se pudo abrir el archivo de salida '%s'\n", argv[3]);
+    } else {
+        ifile = ofile = NULL;
     }
 
     //Tomar parametro n para el tamaño de las matrices NxN
@@ -65,14 +100,25 @@ int main(int argc, char*argv[]){
     //Inicializar matrices 
     srand(time(NULL));
 
-    for (i=0; i<size; i++){
-        A[i] = 1.0;
-        B[i] = 1.0;
-        C[i] = 1.0;
-        R[i] = 0.0;
-        CxD[i] = 0.0;
-        D[i] = getRandomNumber();
-    } 
+    if (ifile && ofile) {
+        matreadrow(ifile, A, sizeof(double), N);
+        matreadcol(ifile, B, sizeof(double), N);
+        matreadrow(ifile, C, sizeof(double), N);
+        matreadcol(ifile, D, sizeof(int), N);
+        for (i=0; i<size; i++) {
+            R[i] = 0.0;
+            CxD[i] = 0.0;
+        }
+    } else {
+        for (i=0; i<size; i++) {
+            A[i] = 1.0;
+            B[i] = 1.0;
+            C[i] = 1.0;
+            R[i] = 0.0;
+            CxD[i] = 0.0;
+            D[i] = getRandomNumber();
+        }
+    }
 
     //Operar matrices
 
@@ -161,6 +207,15 @@ int main(int argc, char*argv[]){
 
     timelog_total();
 
+    if (ofile)
+        fwrite(R, sizeof(double), size, ofile);
+
+    if (ifile)
+        fclose(ifile);
+
+    if (ofile)
+        fclose(ofile);
+
     //Liberando memoria
     free(A);
     free(B);
@@ -216,8 +271,8 @@ int getRandomNumber(){
 
 //Multiplicación de matrices y escalar
 void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double escalar) {
-    int i, j, k, offI, offJ;   
-  
+    int i, j, k, offI, offJ;  
+
     for (i = 0; i < n; i += bs){
         offI = i * n;
         for (j = 0; j < n; j += bs){
@@ -225,6 +280,7 @@ void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, doubl
             for (k = 0; k < n; k += bs){
                 blkmulWithEscalar(&a[offI + k], &b[offJ + k], &c[offI + j], n, bs, escalar);
             }
+            c[offI + j] *= escalar;
         }
     }
 }
@@ -239,7 +295,6 @@ void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, 
             for (k = 0; k < bs; k++){
                 cblk[offI + j] += ablk[offI + k] * bblk[offJ + k];
             }
-            cblk[offI + j] *= escalar;
         }
     }
 }
