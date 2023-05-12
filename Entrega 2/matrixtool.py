@@ -110,10 +110,10 @@ def generate(args):
     matrices = []
     for t in types:
         if t == 'i32':
-            m = numpy.random.randint(0, 40, size=(n, n), dtype=numpy.int32)
+            m = numpy.random.randint(1, 40, size=(n, n), dtype=numpy.int32)
         elif t == 'i64':
             maxval = (1 << 63) - 1
-            m = numpy.random.randint(0, 40, size=(n, n), dtype=numpy.int64)
+            m = numpy.random.randint(1, 40, size=(n, n), dtype=numpy.int64)
         elif t == 'f32':
             maxval = (1 << 20) - 1
             m = numpy.random.randint(0, maxval, size=(n, n), dtype=numpy.int32)
