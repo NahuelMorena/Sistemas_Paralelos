@@ -1,6 +1,6 @@
 #!/bin/sh
 
-N=1024
+N=256
 B=8
 T=8
 
@@ -8,7 +8,7 @@ testsln() {
     local exe="${TMPDIR}/$1"
     local out="${TMPDIR}/output_$1.mat"
     # Compila la solucion
-    gcc -fopenmp -O3 -o "${exe}" "$1/"*.c
+    gcc -pthread -fopenmp -O3 -o "${exe}" "$1/"*.c
 
     echo "$1:"
 
@@ -33,7 +33,7 @@ OMAT="${TMPDIR}/output.mat"
 ./matrixtool.py calculate ${N} "${IMAT}" "${OMAT}"
 
 testsln Secuencial 1
-#testsln Pthreads ${T}
+testsln Pthreads ${T}
 testsln OpenMP ${T}
 
 # Elimina el directorio temporal

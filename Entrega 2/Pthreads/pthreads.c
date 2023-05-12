@@ -1,340 +1,171 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <pthread.h>
-#include <sys/time.h>
-#include <time.h>
+#include "../matlib.h"
 
-#define DEBUG 0
+int N, S, B, T;
+double *MA, *MB, *MC, *MT, *MR;
+int *MD;
 
-//Declaración de funciones
-void* calculate_R(void* id);
-int getRandomNumber();
-void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double escalar, int start_block, int end_block);
-void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double scalar);
-void matIntmulblks(double *a, int *b, double *c, int n, int bs, int start_block, int end_block);
-void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs);
-double dwalltime();
-//Variables compartidas
-int block_size_by_threads, N, size, bs;
-double promA, promB, maxA, maxB, scalar;
-double minA, minB;
-double *A,*B,*C,*R,*CxD;
-int *D;
-//mutex
-pthread_mutex_t promA_lock, promB_lock;
-//barrier
+double min_a, max_a, sum_a, avg_a;
+double min_b, max_b, sum_b, avg_b;
+double e;
+
+int bs;
+
+pthread_mutex_t avg_mutex;
 pthread_barrier_t barrier;
 
-int main(int argc, char*argv[]){
-    //Validar parametros
-    if (argc < 4){
-        fprintf(stderr, "usage %s matrix_size block_size num_threads\n",argv[0]);
-        exit(1);
-    }
-
-    //Tomar argumentos del main 
-    N = atoi(argv[1]);
-    bs = atoi(argv[2]);
-    int num_threads = atoi(argv[3]);
-
-    #if DEBUG == 1
-        printf("N = %i\n",N);
-        printf("bs = %i\n",bs);
-        printf("NUM_THREADS = %i\n", num_threads);
-    #endif
-
-    //declaración de variables
-    int i;
-    double timetick, endtime;
-    size = N*N;
-    A=(double*)malloc(sizeof(double)*size);
-    B=(double*)malloc(sizeof(double)*size);
-    C=(double*)malloc(sizeof(double)*size);
-    R=(double*)malloc(sizeof(double)*size);
-    D=(int*)malloc(sizeof(int)*size);
-    CxD=(double*)malloc(sizeof(double)*size);
-
-    promA = promB = maxA = maxB = scalar = 0.0;
-    minA = minB = 100.0;
-
-    //Inicializar matrices 
-    srand(time(NULL));
-
-    for (i=0; i<size; i++){
-        A[i] = 1.0;
-        B[i] = 1.0;
-        C[i] = 1.0;
-        R[i] = 0.0;
-        CxD[i] = 0.0;
-        D[i] = getRandomNumber();
-    } 
-
-    //Pthreads
-
-    pthread_t threads[num_threads];
-    int ids[num_threads];
-
-    pthread_mutex_init(&promA_lock,NULL);
-    pthread_mutex_init(&promB_lock,NULL);
-
-    pthread_barrier_init(&barrier,NULL,num_threads);
-
-    block_size_by_threads = N/num_threads;
+static void *calculate(void *arg)
+{
+    int id = *((int *)arg);
     
-    //Empieza a contar el tiempo
-    timetick = dwalltime();
+    int sb = bs * id;
+    int eb = bs * (id + 1);
 
-    //Crear hilos
-    for (int i = 0; i < num_threads; i++){
-        ids[i] = i;
-        pthread_create(&threads[i], NULL, calculate_R, &ids[i]);
+    /* MaxA, MinA, PromA */
+    double local_min_a, local_max_a, local_sum_a;
+    local_min_a = local_max_a = MA[0];
+    local_sum_a = 0.0;
+    for (int i = sb; i < eb; i++)
+    {
+        vecd_calc_min_max_sum(&MA[i*N], N, &local_min_a, &local_max_a, &local_sum_a);
     }
 
-    //Espera a que los hilos terminen
-    for (int i = 0; i < num_threads; i++){
-        pthread_join(threads[i], NULL);
+    /* MaxB, MinB, PromB */
+    double local_min_b, local_max_b, local_sum_b;
+    local_min_b = local_max_b = MB[0];
+    local_sum_b = 0.0;
+    for (int i = sb; i < eb; i++)
+    {
+        vecd_calc_min_max_sum(&MB[i*N], N, &local_min_b, &local_max_b, &local_sum_b);
     }
 
-    //Detener el tiempo
-    endtime = dwalltime();
+    /* D = Pot2(D) */
+    for (int i = sb; i < eb; i++)
+    {
+        int *v = &MD[i*N];
+        veci_mult_elem(v, v, v, N);
+    }
+
+    pthread_mutex_lock(&avg_mutex);
+    if (local_min_a < min_a)
+        min_a = local_min_a;
     
-    printf("Tiempo empleado en segundos %f\n", endtime - timetick);
+    if (local_max_a > max_a)
+        max_a = local_max_a;
+    
+    sum_a += local_sum_a;
 
-    #if DEBUG == 1
-        printf("valor de maxA %f\n", maxA);
-        printf("valor de maxB %f\n", maxB);
-        printf("valor de minA %f\n", minA);
-        printf("valor de minB %f\n", minB);
-        printf("valor de promA %f\n", promA);
-        printf("valor de promB %f\n", promB);
-        printf("valor del escalar %f\n", scalar);
-    #endif
-    //for(int i = 0; i<N; i++){
-    //    int cont = 0;
-    //    for (int j = 0; j < N; j++){
-    //        printf("%d ||", D[j*N+i]);
-    //        cont++;
-    //        if (cont == N){
-    //            printf("\n");
-    //        }
-    //    }
-    //}
-
-    //Liberando memoria
-    free(A);
-    free(B);
-    free(C);
-    free(R);
-    free(D);
-    free(CxD);
-
-    pthread_mutex_destroy(&promA_lock);
-    pthread_mutex_destroy(&promB_lock);
-    pthread_barrier_destroy(&barrier);
-
-    return 0;
-}
-
-/*****************************************************************/
-
-void* calculate_R(void* ptr){
-    int* p, id;
-    p = (int*) ptr;
-    id = *p;
-
-    #if DEBUG == 1
-        printf("empieza ejecución hilo %i\n",id);
-    #endif
-
-    int start_block = block_size_by_threads * id;
-    int end_block = block_size_by_threads * (id + 1);
-
-    int i, j, offI, offJ;
-
-
-    //obteniendo minA, maxA y promA
-    double localPromA = 0.0;
-    double localMaxA, localMinA = A[start_block];
-    for(i=start_block ; i<end_block ;i++) {
-        offI = i * N;
-        for(j=0;j<N;j++) {
-	        double valor = A[offI+j];
-
-            if (valor < localMinA) {
-                localMinA = valor;
-            }
-
-            if (valor > localMaxA) {
-                localMaxA = valor;
-            }
-
-            localPromA += valor;
-        }
-    } 
-
-    pthread_mutex_lock(&promA_lock);
-    #if DEBUG == 1
-        printf("soy hilo %d localMInA= %f, valor de minA= %f\n",id, localMinA, minA);
-    #endif
-    if (localMinA < minA){
-        minA = localMinA;
-    }
-    if (localMaxA > maxA){
-        maxA = localMaxA;
-    }
-    promA += localPromA;
-    pthread_mutex_unlock(&promA_lock);
-
-    //obteniendo minB, maxB y promB
-    double localPromB = 0.0;
-    double localMaxB, localMinB = B[start_block];
-    for(j=start_block; j<end_block; j++) {
-        offJ = j * N;
-        for(i=0;i<N;i++) {
-	        double valor = B[i+offJ];
-
-            if (valor < localMinB) {
-                localMinB = valor;
-            }
-
-            if (valor > localMaxB) {
-                localMaxB = valor;
-            }
-
-            localPromB += valor;
-        }
-    } 
-
-    pthread_mutex_lock(&promB_lock);
-    #if DEBUG == 1
-        printf("soy hilo %d localMInB= %f, valor de minB= %f\n",id, localMinB, minB);
-    #endif
-    if (localMinB < minB){
-        minB = localMinB;
-    }
-    if (localMaxB > maxB){
-        maxB = localMaxB;
-    }
-    promB += localPromB;
-    pthread_mutex_unlock(&promB_lock);
+    if (local_min_b < min_b)
+        min_b = local_min_b;
+    
+    if (local_max_b > max_b)
+        max_b = local_max_b;
+    
+    sum_b += local_sum_b;
+    pthread_mutex_unlock(&avg_mutex);
 
     pthread_barrier_wait(&barrier);
-    if (id == 0){
-        promA = promA/size;
-        promB = promB/size;
-        scalar = (maxA * maxB - minA * minB) / (promA * promB);
+
+    if (id == 0)
+    {
+        avg_a = sum_a / (double)S;
+        avg_b = sum_b / (double)S;
+        e = (max_a * max_b - min_a * min_b) / (avg_a * avg_b);
     }
+
     pthread_barrier_wait(&barrier);
 
-    //Hasta este punto se calculo es escalar
+    /* R = e * (A x B) */
+    for (int i = sb; i < eb; i += B)
+    {
+        for (int j = 0; j < N; j += B)
+        {
+            MR[i*N+j] = 0.0;
+            for (int k = 0; k < N; k += B)
+            {
+                blk_matd_mult(&MR[i*N+j], &MA[i*N+k], &MB[j*N+k], N, B);
+            }
+            blk_matd_mult_d(&MR[i*N+j], &MR[i*N+j], e, N, B);
+        }
+    }
 
-    //Multiplicación de AxB
-    matmulblksWithEscalar(A, B, R, N, bs, scalar, start_block, end_block);
-
-    //Pot2(D) 
-    for(int j=start_block; j < end_block; j++) {
-        offJ = j*N;
-        for(int i=0;i<N;i++) {
-            int v = D[i+offJ];
-            D[i+offJ] = v * v;
+    /* T = C x D */
+    for (int i = sb; i < eb; i += B)
+    {
+        for (int j = 0; j < N; j += B)
+        {
+            MT[i*N+j] = 0.0;
+            for (int k = 0; k < N; k += B)
+            {
+                blk_matd_mult_mati(&MT[i*N+j], &MC[i*N+k], &MD[j*N+k], N, B);
+            }
         }
     }
 
     pthread_barrier_wait(&barrier);
 
-    //Multiplicación CxD
-    matIntmulblks(C, D, CxD, N, bs, start_block, end_block);
-
-    pthread_barrier_wait(&barrier);
-
-    //Suma entre (escalar*AxB) + CxD
-    for (i = start_block; i < end_block; i++) {
-        offI = i * N;
-        for (j=0; j<N; j++) {
-            R[offI+j] += CxD[offI+j];
-        }
+    /* R = R + T */
+    for (int i = sb; i < eb; i++)
+    {
+        vecd_sum(&MR[i*N], &MR[i*N], &MT[i*N], N);
     }
-
 
     pthread_exit(0);
 }
 
-/*****************************************************************/
+int main(int argc, char *argv[])
+{
+    mats_t m;
+    mat_init(argc, argv, &m);
 
-int getRandomNumber(){
-    return rand() % 41 + 1;
-}
+    N = m.N;
+    S = m.S;
+    B = m.B;
+    T = m.T;
 
-/*****************************************************************/
+    MA = m.MA;
+    MB = m.MB;
+    MC = m.MC;
+    MT = m.MT;
+    MR = m.MR;
+    MD = m.MD;
 
-//Multiplicación de matrices y escalar
-void matmulblksWithEscalar(double *a, double *b, double *c, int n, int bs, double scalar, int start_block, int end_block) {
-    int i, j, k, offI, offJ;   
-  
-    for (i = start_block; i < end_block; i += bs){
-        offI = i * n;
-        for (j = 0; j < n; j += bs){
-            offJ = j * n;
-            for (k = 0; k < n; k += bs){
-                blkmulWithEscalar(&a[offI + k], &b[offJ + k], &c[offI + j], n, bs, scalar);
-            }
-        }
+    bs = N / T;
+
+    min_a = max_a = MA[0];
+    sum_a = 0.0;
+    min_b = max_b = MB[0];
+    sum_b = 0.0;
+
+    pthread_t threads[T];
+    int thread_ids[T];
+
+    pthread_mutex_init(&avg_mutex, NULL);
+    pthread_barrier_init(&barrier, NULL, T);
+    
+    double st = dwalltime();
+
+    // Crear hilos
+    for (int i = 0; i < T; i++)
+    {
+        thread_ids[i] = i;
+        pthread_create(&threads[i], NULL, calculate, &thread_ids[i]);
     }
-}
 
-void blkmulWithEscalar(double *ablk, double *bblk, double *cblk, int n, int bs, double scalar){
-    int i, j, k, offI, offJ;    
-
-    for (i = 0; i < bs; i++){
-        int offI = i * n;
-        for (j = 0; j < bs; j++){
-            int offJ = j * n;
-            for (k = 0; k < bs; k++){
-                cblk[offI + j] += ablk[offI + k] * bblk[offJ + k];
-            }
-            cblk[offI + j] *= scalar;
-        }
+    // Espera a que todos los hilos terminen
+    for (int i = 0; i < T; i++)
+    {
+        pthread_join(threads[i], NULL);
     }
-}
 
-/*****************************************************************/
+    double t = dwalltime() - st;
+    printf("%.04f\n", t);
 
-void matIntmulblks(double *a, int *b, double *c, int n, int bs, int start_block, int end_block){
-    int i, j, k, offI, offJ;    
+    pthread_mutex_destroy(&avg_mutex);
+    pthread_barrier_destroy(&barrier);
 
-    for (i = start_block; i < end_block; i += bs){
-        offI = i * n;
-        for (j = 0; j < n; j += bs){
-            offJ = j * n;
-            for (k = 0; k < n; k += bs){
-                blkmulwithIntMat(&a[offI + k], &b[offJ + k], &c[offI + j], n, bs);
-            }
-        }
-    }
-}
+    mat_free(&m);
 
-void blkmulwithIntMat(double *ablk, int *bblk, double *cblk, int n, int bs){
-    int i, j, k, offI, offJ;  
-
-    for (i = 0; i < bs; i++){
-        offI = i * n;
-        for (j = 0; j < bs; j++){
-            offJ = j * n;
-            for (k = 0; k < bs; k++){
-                cblk[offI + j] += ablk[offI + k] * bblk[offJ + k];
-            }
-        }
-    }
-}
-
-/*****************************************************************/
-
-/* Funcion para depurar el tiempo de ejecución */
-double dwalltime() {
-    double sec;
-    struct timeval tv;
-
-    gettimeofday(&tv,NULL);
-    sec = tv.tv_sec + tv.tv_usec/1000000.0;
-    return sec;
+    return 0;
 }

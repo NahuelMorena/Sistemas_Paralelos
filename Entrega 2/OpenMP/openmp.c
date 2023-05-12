@@ -10,6 +10,7 @@ int main(int argc, char *argv[])
     int N = m.N;
     int S = m.S;
     int B = m.B;
+    int T = m.T;
 
     double *MA = m.MA;
     double *MB = m.MB;
@@ -26,7 +27,7 @@ int main(int argc, char *argv[])
     
     double st = dwalltime();
 
-    omp_set_num_threads(m.T);
+    omp_set_num_threads(T);
 
     #pragma omp parallel private(i, j, k)
     {
