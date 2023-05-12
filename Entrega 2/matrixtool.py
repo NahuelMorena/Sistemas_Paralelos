@@ -93,10 +93,7 @@ def compare(args):
             equal = False
             break
 
-    if equal:
-        print('Las matrices son iguales')
-    else:
-        print('Las matrices son diferentes')
+    return equal
 
 
 def generate(args):
@@ -166,7 +163,8 @@ def main(args):
     if command is None:
         usage()
     
-    command(args[2:])
+    r = command(args[2:])
+    sys.exit(0 if r is not None and r else 1)
 
 
 if __name__ == '__main__':

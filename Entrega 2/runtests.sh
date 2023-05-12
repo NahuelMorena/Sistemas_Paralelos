@@ -2,23 +2,22 @@
 
 N=256
 B=8
-T=8
+T=4
 
 testsln() {
-    local exe="${TMPDIR}/$1"
     local out="${TMPDIR}/output_$1.mat"
-    # Compila la solucion
-    gcc -pthread -fopenmp -O3 -o "${exe}" "$1/"*.c
 
-    echo "$1:"
+    if [ ! -f "$2" ]; then
+        echo "Compilando..."
+        ./build.sh
+    fi
 
     # Ejecuta la solucion
-    "${exe}" ${N} ${B} $2 ${IMAT} ${out}
+    ./$2 ${N} ${B} ${T} ${IMAT} ${out} > /dev/null
 
     # Compara los resultados
-    ./matrixtool.py compare ${N} ${OMAT} ${out}
-
-    echo
+    echo -n "$1: "
+    ./matrixtool.py compare ${N} ${OMAT} ${out} && echo "OK" || echo "FAILED"
 }
 
 # Crea un directorio temporal
@@ -32,9 +31,9 @@ IMAT="${TMPDIR}/input.mat"
 OMAT="${TMPDIR}/output.mat"
 ./matrixtool.py calculate ${N} "${IMAT}" "${OMAT}"
 
-testsln Secuencial 1
-testsln Pthreads ${T}
-testsln OpenMP ${T}
+testsln secuencial mat
+testsln pthreads mat_pthreads
+testsln openmp mat_openmp
 
 # Elimina el directorio temporal
 rm -r "${TMPDIR}"

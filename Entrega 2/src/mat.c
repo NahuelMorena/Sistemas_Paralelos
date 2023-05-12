@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "../matlib.h"
+#include "matlib.h"
 
 int main(int argc, char *argv[])
 {

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <pthread.h>
-#include "../matlib.h"
+#include "matlib.h"
 
 int N, S, B, T;
 double *MA, *MB, *MC, *MT, *MR;

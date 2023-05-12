@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <omp.h>
-#include "../matlib.h"
+#include "matlib.h"
 
 int main(int argc, char *argv[])
 {
