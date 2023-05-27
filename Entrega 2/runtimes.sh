@@ -22,7 +22,7 @@ run() {
         local a=()
         for n in ${N[@]}; do
             echo -n "$1 T=$t N=$n: "
-            local v=$(./$1 $n 8 $t)
+            local v=$(./$1 $n 64 $t)
             echo "${v}s"
             a+=($v)
         done
