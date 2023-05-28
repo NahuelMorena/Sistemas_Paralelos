@@ -2,6 +2,8 @@
 #include <mpi.h>
 #include "matlib.h"
 
+#define COORDINATOR 0
+
 int main(int argc, char *argv[]){
     mats_t m;
     mat_init(argc, argv, &m);
@@ -33,21 +35,17 @@ int main(int argc, char *argv[]){
     MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
     int strip_size = N / numProcs;
-    //int cellAmount = local_size * N;
-    int COORDINATOR = 0;
+  
 
     if (rank == COORDINATOR) {
         //double st = dwalltime();
     }
 
-    // Reparto de las matrices A y B
-    MPI_Scatter(MA, strip_size, 
-                MPI_DOUBLE, MA, strip_size,
-                MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 
-    MPI_Scatter(MB, strip_size,
-                MPI_DOUBLE, MB, strip_size,
-                MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
+    // Reparto de las matrices A y B
+    MPI_Scatter(MA, strip_size, MPI_DOUBLE, MA, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
+    MPI_Scatter(MB, strip_size, MPI_DOUBLE, MB, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
 
     /* MaxA, MinA, AvgA */
     local_max_a = local_min_a = MA[0];
@@ -63,11 +61,17 @@ int main(int argc, char *argv[]){
         vecd_calc_min_max_sum(&MB[i*N], N, &local_min_b, &local_max_b, &local_sum_b);
     }
 
+    /* D = Pot2(D) */
+    MPI_Scatter(MD, strip_size, MPI_INT, MD, strip_size, MPI_INT, COORDINATOR, MPI_COMM_WORLD);
+
+    for (i = 0; i < strip_size; i++){
+        int *v = &MD[i*N];
+        veci_mult_elem(v, v, v, strip_size);
+    }
 
     MPI_Allreduce(&local_min_a, &min_a, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&local_max_a, &max_a, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&local_sum_a, &sum_a, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-   
    
     MPI_Allreduce(&local_min_b, &min_b, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&local_max_b, &max_b, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
@@ -79,7 +83,41 @@ int main(int argc, char *argv[]){
         e = (max_a * max_b - min_a * min_b) / (avg_a * avg_b);
     }
 
-    
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    MPI_Scatter(MR, strip_size, MPI_DOUBLE, MR, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
+    /* R = e * (A x B) */
+    for (i = 0; i < strip_size; i += B){
+        for (j = 0; j < N; j += B){
+            MR[i*N+j] = 0.0;
+            for (k = 0; k < N; k += B){
+                blk_matd_mult(&MR[i*N+j], &MA[i*N+k], &MB[j*N+k], N, B);
+            }
+            blk_matd_mult_d(&MR[i*N+j], &MR[i*N+j], e, N, B);
+        }
+    }
+
+    MPI_Scatter(MT, strip_size, MPI_DOUBLE, MT, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
+    MPI_Scatter(MC, strip_size, MPI_DOUBLE, MC, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
+    /* T = C x D */
+    for (i = 0; i < strip_size; i += B){
+        for (j = 0; j < N; j += B){
+            MT[i*N+j] = 0.0;
+            for (k = 0; k < N; k += B){
+                blk_matd_mult_mati(&MT[i*N+j], &MC[i*N+k], &MD[j*N+k], N, B);
+            }
+        }
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    /* R = R + T */
+    for (i = 0; i < strip_size; i++){
+        vecd_sum(&MR[i*N], &MR[i*N], &MT[i*N], N);
+    }
+
+    MPI_Gather(MR, strip_size, MPI_DOUBLE, MR, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
+
     printf("valor del max_a %f\n", max_a);
     printf("valor del min_a %f\n", min_a);
     printf("valor del avg_a %f\n", avg_a);
@@ -87,7 +125,12 @@ int main(int argc, char *argv[]){
     printf("valor del min_b %f\n", min_b);
     printf("valor del avg_b %f\n", avg_b);
     printf("valor del escalar %f\n", e);
+
     
-    MPI_Finalize();
+    
     mat_free(&m);
+
+    MPI_Finalize();
+
+    return 0;
 }

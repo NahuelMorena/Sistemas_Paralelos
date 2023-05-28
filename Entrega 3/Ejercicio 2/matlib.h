@@ -158,14 +158,14 @@ static void mat_free(const mats_t *m)
 /*
  * Operación de matrices y submatrices de diferentes tipos
  */
-/*
+
 static inline void vecd_sum(double *r, double *a, double *b, int size)
 {
     int i;
     for (i = 0; i < size; i++)
         r[i] = a[i] + b[i];
 }
-*/
+
 static inline void vecd_calc_min_max_sum(double *m, int size, double *min, double *max, double *sum)
 {
     int i;
@@ -182,15 +182,14 @@ static inline void vecd_calc_min_max_sum(double *m, int size, double *min, doubl
         *sum += v;
     }
 }
-/*
+
 static inline void veci_mult_elem(int *r, int *a, int *b, int size)
 {
     int i;
     for (i = 0; i < size; i++)
         r[i] = a[i] * b[i];
 }
-*/
-/*
+
 static inline void blk_matd_mult_d(double *r, double *a, double b, int size, int blksize)
 {
     int i, j;
@@ -202,8 +201,7 @@ static inline void blk_matd_mult_d(double *r, double *a, double b, int size, int
         }
     }
 }
-*/
-/*
+
 static inline void blk_matd_mult_mati(double *r, double *a, int *b, int size, int blksize)
 {
     int i, j, k;
@@ -218,8 +216,7 @@ static inline void blk_matd_mult_mati(double *r, double *a, int *b, int size, in
         }
     }
 }
-*/
-/*
+
 static inline void blk_matd_mult(double *r, double *a, double *b, int size, int blksize)
 {
     int i, j, k;
@@ -234,7 +231,6 @@ static inline void blk_matd_mult(double *r, double *a, double *b, int size, int 
         }
     }
 }
-*/
 /*
 static inline void matd_mult_mati(double *r, double *a, int *b, int size, int blksize)
 {
