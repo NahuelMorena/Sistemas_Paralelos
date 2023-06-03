@@ -57,7 +57,6 @@ typedef struct
     int S; /* Cantidad de elementos de las matrices */
     int B; /* Tamaño de las submatrices */
     int T; /* Número de hilos */
-    int P; /* Número de nodos*/
     /* Matrices */
     double *MA, *MB, *MC, *MR, *MT;
     int *MD;

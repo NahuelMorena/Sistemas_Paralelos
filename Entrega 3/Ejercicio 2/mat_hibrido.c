@@ -13,7 +13,6 @@ int main(int argc, char *argv[]){
     int S = m.S;
     int B = m.B;
     int T = m.T;
-    int P = m.P;
 
     double *MA = m.MA;
     double *MB = m.MB;
@@ -27,6 +26,7 @@ int main(int argc, char *argv[]){
     double min_b, max_b, sum_b, avg_b;
     double local_min_b, local_max_b, local_sum_b;
     double e;
+    int localrank;
 
     int i, j, k;
 
@@ -78,20 +78,23 @@ int main(int argc, char *argv[]){
             veci_mult_elem(v, v, v, N);
         }
 
-        MPI_Allreduce(&local_min_a, &min_a, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-        MPI_Allreduce(&local_max_a, &max_a, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-        MPI_Allreduce(&local_sum_a, &sum_a, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-   
-        MPI_Allreduce(&local_min_b, &min_b, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-        MPI_Allreduce(&local_max_b, &max_b, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-        MPI_Allreduce(&local_sum_b, &sum_b, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Reduce(&local_min_a, &min_a, 1, MPI_DOUBLE, MPI_MIN, COORDINATOR, MPI_COMM_WORLD);
+        MPI_Reduce(&local_max_a, &max_a, 1, MPI_DOUBLE, MPI_MAX, COORDINATOR, MPI_COMM_WORLD);
+        MPI_Reduce(&local_sum_a, &sum_a, 1, MPI_DOUBLE, MPI_SUM, COORDINATOR, MPI_COMM_WORLD);
+
+        MPI_Reduce(&local_min_b, &min_b, 1, MPI_DOUBLE, MPI_MIN, COORDINATOR, MPI_COMM_WORLD);
+        MPI_Reduce(&local_max_b, &max_b, 1, MPI_DOUBLE, MPI_MAX, COORDINATOR, MPI_COMM_WORLD);
+        MPI_Reduce(&local_sum_b, &sum_b, 1, MPI_DOUBLE, MPI_SUM, COORDINATOR, MPI_COMM_WORLD);
         
         #pragma omp single
         {
             avg_a = sum_a / (double)S;
             avg_b = sum_b / (double)S;
             e = (max_a * max_b - min_a * min_b) / (avg_a * avg_b);  
+            localrank = rank;
         }
+        //Envia el valor escalar a todos los nodos
+        MPI_Bcast(&e, 1, MPI_DOUBLE, localrank, MPI_COMM_WORLD);
 
         //Envia la matriz B completa a todos los nodos
         MPI_Bcast(MB, N, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
