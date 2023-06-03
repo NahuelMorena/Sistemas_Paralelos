@@ -43,9 +43,11 @@ int main(int argc, char *argv[]){
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Reparto de las matrices A y B
+    // Reparto parcial de las matrices A, B, C, D
     MPI_Scatter(MA, strip_size, MPI_DOUBLE, MA, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
     MPI_Scatter(MB, strip_size, MPI_DOUBLE, MB, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
+    MPI_Scatter(MC, strip_size, MPI_DOUBLE, MC, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
+    MPI_Scatter(MD, strip_size, MPI_INT, MD, strip_size, MPI_INT, COORDINATOR, MPI_COMM_WORLD);
 
     /* MaxA, MinA, AvgA */
     local_max_a = local_min_a = MA[0];
@@ -62,8 +64,6 @@ int main(int argc, char *argv[]){
     }
 
     /* D = Pot2(D) */
-    MPI_Scatter(MD, strip_size, MPI_INT, MD, strip_size, MPI_INT, COORDINATOR, MPI_COMM_WORLD);
-
     for (i = 0; i < strip_size; i++){
         int *v = &MD[i*N];
         veci_mult_elem(v, v, v, strip_size);
@@ -83,9 +83,8 @@ int main(int argc, char *argv[]){
         e = (max_a * max_b - min_a * min_b) / (avg_a * avg_b);
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Bcast(MB, N, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
 
-    MPI_Scatter(MR, strip_size, MPI_DOUBLE, MR, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
     /* R = e * (A x B) */
     for (i = 0; i < strip_size; i += B){
         for (j = 0; j < N; j += B){
@@ -97,8 +96,8 @@ int main(int argc, char *argv[]){
         }
     }
 
-    MPI_Scatter(MT, strip_size, MPI_DOUBLE, MT, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
-    MPI_Scatter(MC, strip_size, MPI_DOUBLE, MC, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
+    MPI_Bcast(MD, N, MPI_INT, COORDINATOR, MPI_COMM_WORLD);
+
     /* T = C x D */
     for (i = 0; i < strip_size; i += B){
         for (j = 0; j < N; j += B){

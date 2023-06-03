@@ -93,12 +93,8 @@ int main(int argc, char *argv[]){
             e = (max_a * max_b - min_a * min_b) / (avg_a * avg_b);  
         }
 
-        if (rank == COORDINATOR){
-            //Envia la matriz B completa a todos los nodos
-            MPI_Bcast(MB, N, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
-        }
-
-        MPI_Barrier(MPI_COMM_WORLD);
+        //Envia la matriz B completa a todos los nodos
+        MPI_Bcast(MB, N, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
 
         /* R = e * (A x B) */
         #pragma omp for nowait
@@ -112,12 +108,8 @@ int main(int argc, char *argv[]){
             }
         }
 
-        if (rank == COORDINATOR){
-            //Envia la matriz D completa a todos los nodos
-            MPI_Bcast(MD, N, MPI_INT, COORDINATOR, MPI_COMM_WORLD);
-        }
-        
-        MPI_Barrier(MPI_COMM_WORLD);
+        //Envia la matriz D completa a todos los nodos
+        MPI_Bcast(MD, N, MPI_INT, COORDINATOR, MPI_COMM_WORLD);
 
         /* T = C x D */
         #pragma omp for
