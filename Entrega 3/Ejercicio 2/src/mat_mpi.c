@@ -3,6 +3,7 @@
 #include "matlib.h"
 
 #define COORDINATOR 0
+#define DEBUG 0
 
 int main(int argc, char *argv[]){
     mats_t m;
@@ -35,9 +36,10 @@ int main(int argc, char *argv[]){
 
     int strip_size = N / numProcs;
   
-
+    //Times
+    double st, t;
     if (rank == COORDINATOR) {
-        //double st = dwalltime();
+        st = dwalltime();
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -120,6 +122,12 @@ int main(int argc, char *argv[]){
 
     MPI_Gather(MR, strip_size, MPI_DOUBLE, MR, strip_size, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
 
+    if (rank == COORDINATOR) {
+        t = dwalltime() - st;
+        printf("%.04f\n", t);
+    }
+
+    #if DEBUG == 1
     printf("valor del max_a %f\n", max_a);
     printf("valor del min_a %f\n", min_a);
     printf("valor del avg_a %f\n", avg_a);
@@ -127,7 +135,7 @@ int main(int argc, char *argv[]){
     printf("valor del min_b %f\n", min_b);
     printf("valor del avg_b %f\n", avg_b);
     printf("valor del escalar %f\n", e);
-
+    #endif
     
     
     mat_free(&m);
