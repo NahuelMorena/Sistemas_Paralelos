@@ -64,11 +64,11 @@ typedef struct
     FILE *ifile, *ofile;
 } mats_t;
 
-static void argParse(int argc, char *argv[], mats_t *m)
+static void arg_parse(int argc, char *argv[], int open_files, mats_t *m)
 {
     if (argc < 3)
     {
-        fprintf(stderr, "usage: %s matrix_size block_size [num_threads = 1] [input_file output_file]\n", argv[0]);
+        fprintf(stderr, "usage: %s matrix_size block_size [num_threads = 1] [input_file] [output_file]\n", argv[0]);
         exit(1);
     }
 
@@ -81,7 +81,7 @@ static void argParse(int argc, char *argv[], mats_t *m)
     else
         m->T = 1;
     
-    if (argc >= 5)
+    if (open_files && argc >= 5)
     {
         m->ifile = fopen(argv[4], "rb");
         if (!m->ifile)
@@ -93,7 +93,7 @@ static void argParse(int argc, char *argv[], mats_t *m)
     else
         m->ifile = NULL;
 
-    if (argc >= 6)
+    if (open_files && argc >= 6)
     {
         m->ofile = fopen(argv[5], "wb");
         if (!m->ofile)
@@ -106,34 +106,38 @@ static void argParse(int argc, char *argv[], mats_t *m)
         m->ofile = NULL;
 }
 
-static void mat_init(int argc, char *argv[], mats_t *m)
+static void mat_init(int argc, char *argv[], int coord, int procs, mats_t *m)
 {
-    argParse(argc, argv, m);
+    arg_parse(argc, argv, coord, m);
 
-    m->MA = (double *)malloc(sizeof(double) * m->S);
+    int s = coord ? m->S : m->S / procs;
+
+    m->MA = (double *)malloc(sizeof(double) * s);
     m->MB = (double *)malloc(sizeof(double) * m->S);
-    m->MC = (double *)malloc(sizeof(double) * m->S);
-    m->MR = (double *)malloc(sizeof(double) * m->S);
-    m->MT = (double *)malloc(sizeof(double) * m->S);
+    m->MC = (double *)malloc(sizeof(double) * s);
+    m->MR = (double *)malloc(sizeof(double) * s);
+    m->MT = (double *)malloc(sizeof(double) * s);
     m->MD = (int *)malloc(sizeof(int) * m->S);
 
-    if (m->ifile)
-    {
-        matReadRow(m->ifile, m->MA, sizeof(double), m->N);
-        matReadCol(m->ifile, m->MB, sizeof(double), m->N);
-        matReadRow(m->ifile, m->MC, sizeof(double), m->N);
-        matReadCol(m->ifile, m->MD, sizeof(int), m->N);
-        fclose(m->ifile);
-    }
-    else
-    {
-        srand((int)(dwalltime() * 1000.0));
-        for (int i = 0; i < m->S; i++)
+    if (coord) {
+        if (m->ifile)
         {
-            m->MA[i] = 1.0;
-            m->MB[i] = 1.0;
-            m->MC[i] = 1.0;
-            m->MD[i] = rand() % 41 + 1;
+            matReadRow(m->ifile, m->MA, sizeof(double), m->N);
+            matReadCol(m->ifile, m->MB, sizeof(double), m->N);
+            matReadRow(m->ifile, m->MC, sizeof(double), m->N);
+            matReadCol(m->ifile, m->MD, sizeof(int), m->N);
+            fclose(m->ifile);
+        }
+        else
+        {
+            srand((int)(dwalltime() * 1000.0));
+            for (int i = 0; i < m->S; i++)
+            {
+                m->MA[i] = 1.0;
+                m->MB[i] = 1.0;
+                m->MC[i] = 1.0;
+                m->MD[i] = rand() % 41 + 1;
+            }
         }
     }
 }
