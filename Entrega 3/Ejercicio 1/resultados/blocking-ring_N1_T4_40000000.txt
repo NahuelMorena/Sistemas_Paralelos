@@ -1,0 +1,34 @@
+
+
+
+##########################################################
+
+ Comunicacion punto-a-punto bloqueante: MPI_Send, MPI_Recv 
+
+ Dimension del vector: 40000000
+ Numero de procesos: 4
+
+##########################################################
+
+                --> ANTES DE LA COMUNICACION <--
+
+Proceso 0 : Suma del vector enviado a 1 = 2.000219e+07
+Proceso 1 : Suma del vector enviado a 2 = 2.000315e+07
+Proceso 2 : Suma del vector enviado a 3 = 2.000112e+07
+Proceso 3 : Suma del vector enviado a 0 = 2.000054e+07
+
+##########################################################
+
+                --> DESPUES DE LA COMUNICACION <-- 
+
+Proceso 0 : Suma del vector recibido = 2.000054e+07 : Tiempo=0.247708 segundos
+Proceso 1 : Suma del vector recibido = 2.000219e+07 : Tiempo=0.505288 segundos
+Proceso 2 : Suma del vector recibido = 2.000315e+07 : Tiempo=0.739431 segundos
+Proceso 3 : Suma del vector recibido = 2.000112e+07 : Tiempo=0.985104 segundos
+
+##########################################################
+
+ Tiempo de comunicacion : 0.985075 seconds
+
+##########################################################
+

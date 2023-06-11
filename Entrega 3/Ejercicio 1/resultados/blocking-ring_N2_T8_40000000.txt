@@ -1,0 +1,58 @@
+
+
+
+##########################################################
+
+ Comunicacion punto-a-punto bloqueante: MPI_Send, MPI_Recv 
+
+ Dimension del vector: 40000000
+ Numero de procesos: 16
+
+##########################################################
+
+                --> ANTES DE LA COMUNICACION <--
+
+Proceso 0 : Suma del vector enviado a 1 = 2.000112e+07
+Proceso 1 : Suma del vector enviado a 2 = 2.000054e+07
+Proceso 2 : Suma del vector enviado a 3 = 1.999947e+07
+Proceso 3 : Suma del vector enviado a 4 = 2.000150e+07
+Proceso 4 : Suma del vector enviado a 5 = 2.000109e+07
+Proceso 5 : Suma del vector enviado a 6 = 1.999741e+07
+Proceso 6 : Suma del vector enviado a 7 = 1.999978e+07
+Proceso 7 : Suma del vector enviado a 8 = 2.000101e+07
+Proceso 8 : Suma del vector enviado a 9 = 1.999646e+07
+Proceso 9 : Suma del vector enviado a 10 = 2.000116e+07
+Proceso 10 : Suma del vector enviado a 11 = 1.999755e+07
+Proceso 11 : Suma del vector enviado a 12 = 1.999967e+07
+Proceso 12 : Suma del vector enviado a 13 = 1.999998e+07
+Proceso 13 : Suma del vector enviado a 14 = 1.999809e+07
+Proceso 14 : Suma del vector enviado a 15 = 1.999793e+07
+Proceso 15 : Suma del vector enviado a 0 = 2.000091e+07
+
+##########################################################
+
+                --> DESPUES DE LA COMUNICACION <-- 
+
+Proceso 0 : Suma del vector recibido = 2.000091e+07 : Tiempo=2.719599 segundos
+Proceso 1 : Suma del vector recibido = 2.000112e+07 : Tiempo=3.057006 segundos
+Proceso 2 : Suma del vector recibido = 2.000054e+07 : Tiempo=3.264171 segundos
+Proceso 3 : Suma del vector recibido = 1.999947e+07 : Tiempo=3.538546 segundos
+Proceso 4 : Suma del vector recibido = 2.000150e+07 : Tiempo=3.813585 segundos
+Proceso 5 : Suma del vector recibido = 2.000109e+07 : Tiempo=4.142845 segundos
+Proceso 6 : Suma del vector recibido = 1.999741e+07 : Tiempo=4.369496 segundos
+Proceso 7 : Suma del vector recibido = 1.999978e+07 : Tiempo=4.647211 segundos
+Proceso 8 : Suma del vector recibido = 2.000101e+07 : Tiempo=7.383050 segundos
+Proceso 9 : Suma del vector recibido = 1.999646e+07 : Tiempo=7.701390 segundos
+Proceso 10 : Suma del vector recibido = 2.000116e+07 : Tiempo=7.945504 segundos
+Proceso 11 : Suma del vector recibido = 1.999755e+07 : Tiempo=8.221486 segundos
+Proceso 12 : Suma del vector recibido = 1.999967e+07 : Tiempo=8.470393 segundos
+Proceso 13 : Suma del vector recibido = 1.999998e+07 : Tiempo=8.740730 segundos
+Proceso 14 : Suma del vector recibido = 1.999809e+07 : Tiempo=9.104674 segundos
+Proceso 15 : Suma del vector recibido = 1.999793e+07 : Tiempo=9.384742 segundos
+
+##########################################################
+
+ Tiempo de comunicacion : 9.273205 seconds
+
+##########################################################
+

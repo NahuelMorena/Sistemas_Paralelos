@@ -1,0 +1,41 @@
+
+
+
+##########################################################
+
+ Comunicacion punto-a-punto no bloqueante: MPI_Isend, MPI_Irecv 
+
+ Dimension del vector: 20000000
+ Numero de procesos: 8
+
+##########################################################
+
+                --> ANTES DE LA COMUNICACION <--
+
+Proceso 0 : Suma del vector enviado a 1 = 9.997372e+06
+Proceso 1 : Suma del vector enviado a 2 = 9.997789e+06
+Proceso 2 : Suma del vector enviado a 3 = 9.999358e+06
+Proceso 3 : Suma del vector enviado a 4 = 9.999020e+06
+Proceso 4 : Suma del vector enviado a 5 = 9.998427e+06
+Proceso 5 : Suma del vector enviado a 6 = 1.000055e+07
+Proceso 6 : Suma del vector enviado a 7 = 9.999037e+06
+Proceso 7 : Suma del vector enviado a 0 = 1.000123e+07
+##########################################################
+
+                --> DESPUES DE LA COMUNICACION <-- 
+
+Proceso 0 : Suma del vector recibido = 1.000123e+07 : Tiempo=0.000016 segundos
+Proceso 1 : Suma del vector recibido = 9.997372e+06 : Tiempo=0.000064 segundos
+Proceso 2 : Suma del vector recibido = 9.997789e+06 : Tiempo=0.000031 segundos
+Proceso 3 : Suma del vector recibido = 9.999358e+06 : Tiempo=0.000062 segundos
+Proceso 4 : Suma del vector recibido = 9.999020e+06 : Tiempo=0.000054 segundos
+Proceso 5 : Suma del vector recibido = 9.998427e+06 : Tiempo=0.000066 segundos
+Proceso 6 : Suma del vector recibido = 1.000055e+07 : Tiempo=0.000069 segundos
+Proceso 7 : Suma del vector recibido = 9.999037e+06 : Tiempo=0.000022 segundos
+
+##########################################################
+
+ Tiempo de comunicacion : 0.612635 seconds
+
+##########################################################
+
