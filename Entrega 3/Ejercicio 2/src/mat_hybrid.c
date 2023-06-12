@@ -106,6 +106,8 @@ int main(int argc, char *argv[]) {
 
             // Envia el valor escalar a todos los nodos
             MPI_Bcast(&e, 1, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
+
+            MPI_Allgather(MD, strip_size * N, MPI_INT, MD, strip_size * N, MPI_INT, MPI_COMM_WORLD);
         }
 
         // R = e * (A x B)
@@ -118,11 +120,6 @@ int main(int argc, char *argv[]) {
                 }
                 blk_matd_mult_d(&MR[i*N+j], &MR[i*N+j], e, N, B);
             }
-        }
-
-        #pragma single
-        {
-            MPI_Allgather(MD, strip_size * N, MPI_INT, MD, strip_size * N, MPI_INT, MPI_COMM_WORLD);
         }
 
         // T = C x D
