@@ -41,18 +41,18 @@ int main(int argc, char *argv[]) {
     double st, t, comst, comt = 0.0, comtotal = 0.0;
     
     if (rank == COORDINATOR) {
-        st = dwalltime();
+        st = MPI_Wtime();
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Envio las matrices A, B, C, D
-    comst = dwalltime();
+    comst = MPI_Wtime();
     MPI_Bcast(MB, S, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
     MPI_Scatter(MA, strip_size * N, MPI_DOUBLE, MA, strip_size * N, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
     MPI_Scatter(MC, strip_size * N, MPI_DOUBLE, MC, strip_size * N, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
     MPI_Scatter(MD, strip_size * N, MPI_INT, MD, strip_size * N, MPI_INT, COORDINATOR, MPI_COMM_WORLD);
-    comt += dwalltime() - comst;
+    comt += MPI_Wtime() - comst;
 
     // MaxA, MinA, AvgA (MA: Scatter)
     lmin[0] = lmax[0] = MA[0];
@@ -82,11 +82,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    comst = dwalltime();
+    comst = MPI_Wtime();
     MPI_Reduce(lmin, min, 2, MPI_DOUBLE, MPI_MIN, COORDINATOR, MPI_COMM_WORLD);
     MPI_Reduce(lmax, max, 2, MPI_DOUBLE, MPI_MAX, COORDINATOR, MPI_COMM_WORLD);
     MPI_Reduce(lsum, sum, 2, MPI_DOUBLE, MPI_SUM, COORDINATOR, MPI_COMM_WORLD);
-    comt += dwalltime() - comst;
+    comt += MPI_Wtime() - comst;
 
     if (rank == COORDINATOR) {
         for (i = 0; i < 2; i++) {
@@ -96,9 +96,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Envia el valor escalar a todos los nodos
-    comst = dwalltime();
+    comst = MPI_Wtime();
     MPI_Bcast(&e, 1, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
-    comt += dwalltime() - comst;
+    comt += MPI_Wtime() - comst;
 
     // R = e * (A x B)
     for (i = 0; i < strip_size; i += B) {
@@ -111,9 +111,9 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    comst = dwalltime();
+    comst = MPI_Wtime();
     MPI_Allgather(MD, strip_size * N, MPI_INT, MD, strip_size * N, MPI_INT, MPI_COMM_WORLD);
-    comt += dwalltime() - comst;
+    comt += MPI_Wtime() - comst;
 
     // T = C x D
     for (i = 0; i < strip_size; i += B) {
@@ -130,12 +130,12 @@ int main(int argc, char *argv[]) {
         vecd_sum(&MR[i*N], &MR[i*N], &MT[i*N], N);
     }
 
-    comst = dwalltime();
+    comst = MPI_Wtime();
     MPI_Gather(MR, strip_size * N, MPI_DOUBLE, MR, strip_size * N, MPI_DOUBLE, COORDINATOR, MPI_COMM_WORLD);
-    comt += dwalltime() - comst;
+    comt += MPI_Wtime() - comst;
 
     if (rank == COORDINATOR) {
-        t = dwalltime() - st;
+        t = MPI_Wtime() - st;
         printf("Tiempo: %.04f\n", t);
     }
 
