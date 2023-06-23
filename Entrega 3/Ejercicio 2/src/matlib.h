@@ -234,39 +234,5 @@ static inline void blk_matd_mult(double *r, double *a, double *b, int size, int 
         }
     }
 }
-/*
-static inline void matd_mult_mati(double *r, double *a, int *b, int size, int blksize)
-{
-    int i, j, k;
-    for (i = 0; i < size; i += blksize)
-    {
-        for (j = 0; j < size; j += blksize)
-        {
-            r[i*size+j] = 0.0;
-            for (k = 0; k < size; k += blksize)
-            {
-                blk_matd_mult_mati(&r[i*size+j], &a[i*size+k], &b[j*size+k], size, blksize);
-            }
-        }
-    }
-}
-*/
-/*
-static inline void matd_mult_with_scalar(double *r, double *a, double *b, double c, int size, int blksize)
-{
-    int i, j, k;
-    for (i = 0; i < size; i += blksize)
-    {
-        for (j = 0; j < size; j += blksize)
-        {
-            r[i*size+j] = 0.0;
-            for (k = 0; k < size; k += blksize)
-            {
-                blk_matd_mult(&r[i*size+j], &a[i*size+k], &b[j*size+k], size, blksize);
-            }
-            blk_matd_mult_d(&r[i*size+j], &r[i*size+j], c, size, blksize);
-        }
-    }
-}
-*/
+
 #endif
