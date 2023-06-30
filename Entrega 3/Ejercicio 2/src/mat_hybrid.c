@@ -151,13 +151,13 @@ int main(int argc, char *argv[]) {
 
     if (rank == COORDINATOR) {
         t = MPI_Wtime() - st;
-        printf("%.04f\n", t);
+        printf("Tiempo: %.04f\n", t);
     }
 
     MPI_Reduce(&comt, &comtotal, 1, MPI_DOUBLE, MPI_SUM, COORDINATOR, MPI_COMM_WORLD);
 
     if (rank == COORDINATOR) {
-        printf("Tiempo de com.: %.09f\n", comtotal);
+        printf("Tiempo de com.: %.04f\n", comtotal);
     }
 
     mat_free(&m);
